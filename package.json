@@ -1,0 +1,63 @@
+{
+  "name": "dsh-moodboard-wall",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "灵感墙/截图中转箱：DSH 右侧栏的素材灵感墙，支持粘贴、拖放、分组整理与一键发送到会话。",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/banyeshuiwujiao/dsh-moodboard-wall.git"
+  },
+  "homepage": "https://github.com/banyeshuiwujiao/dsh-moodboard-wall#readme",
+  "bugs": {
+    "url": "https://github.com/banyeshuiwujiao/dsh-moodboard-wall/issues"
+  },
+  "author": "banyeshuiwujiao",
+  "license": "MIT",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin",
+    "moodboard",
+    "screenshot",
+    "sidebar",
+    "attachment"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "LICENSE"
+  ],
+  "meta": {
+    "title": "灵感墙 / 截图中转箱",
+    "description": "在右侧栏收集截图与设计素材：粘贴、拖放、分组整理，并把选中的图片一键送进当前会话。"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-session",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-sidebar-right"
+      ]
+    }
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

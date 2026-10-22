@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Moodboard">
+  <rect x="3" y="5" width="20" height="16" rx="3" fill="#247bbf" opacity="0.9"/>
+  <path d="M6 18.5l4.6-5.2 3.4 3.6 2.6-2.4L21 18.5z" fill="#0d1b2a" opacity="0.85"/>
+  <circle cx="9.2" cy="10.4" r="1.9" fill="#0d1b2a" opacity="0.85"/>
+  <rect x="12" y="13" width="17" height="14" rx="3" fill="#4fc3a1"/>
+  <path d="M14.6 24.6l3.8-4.3 2.8 3 2.2-2 3 3.3z" fill="#0d1b2a" opacity="0.85"/>
+  <circle cx="17.4" cy="17.4" r="1.6" fill="#0d1b2a" opacity="0.85"/>
+</svg>
