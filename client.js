@@ -1058,8 +1058,7 @@ window.__ModuleLoader__.load({
             placeholder: t('text.placeholder'),
             'aria-label': t('field.note'),
             onMouseDown: (event) => event.stopPropagation(),
-            onChange: (event) => onCommit(item.id, { content: event.target.value }),
-            onBlur: () => onCommit(item.id, item.content, true)
+            onChange: (event) => onCommit(item.id, { content: event.target.value })
           }),
         image && item.title ? h('span', { className: 'mbw-blockTitle' }, item.title) : null,
         h(
@@ -1390,7 +1389,7 @@ window.__ModuleLoader__.load({
         notify(t('notice.deleted'), 'info');
       }, [t]);
 
-      /** Clear the board in force, behind a two-step confirm. */
+      /** Clear the board in force, behind a two-step confirm that disarms itself. */
       const clear = useCallback(async () => {
         if (!armed) {
           setArmed(true);
@@ -1400,6 +1399,13 @@ window.__ModuleLoader__.load({
         await clearBoard();
         notify(t('notice.cleared'), 'info');
       }, [armed, t]);
+
+      /** Drop the clear confirmation after a while, so a stray first click is not a trap. */
+      useEffect(() => {
+        if (!armed) return undefined;
+        const timer = window.setTimeout(() => setArmed(false), 4000);
+        return () => window.clearTimeout(timer);
+      }, [armed]);
 
       /** Export every image and text of the board in force. */
       const exportAll = useCallback(async () => {
