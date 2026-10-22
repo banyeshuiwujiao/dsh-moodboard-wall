@@ -12,18 +12,36 @@ window.__ModuleLoader__.load({
     /** This implementation's identity in the tab system, and the key its body registers under. */
     const PLUGIN_ID = 'dsh-moodboard-wall';
 
-    /** Browser-local storage for the wall's image records. */
+    /** Browser-local storage for the wall's records. */
     const DB_NAME = 'dsh-moodboard-wall';
     const DB_VERSION = 1;
     const STORE = 'items';
     /** Browser-local storage for the board list. */
     const BOARDS_KEY = 'dsh.moodboard.boards.v1';
+    /** Browser-local storage for the canvas preferences. */
+    const LAYOUT_KEY = 'dsh.moodboard.layout.v1';
     /** The pseudo board that shows every item. */
     const ALL = 'all';
     /** The pseudo board that shows items without a board. */
     const INBOX = 'inbox';
     /** A wall this size stays comfortably inside a browser tab's memory. */
     const MAX_ITEMS = 300;
+    /** Longest edge kept when a pasted image is normalized. */
+    const MAX_EDGE = 1920;
+    /** Longest edge a freshly pasted image opens at, so a 4K screenshot does not swamp the canvas. */
+    const FIT_EDGE = 320;
+    /** Smallest rendered image block. */
+    const MIN_IMAGE = 80;
+    /** Smallest text block. */
+    const MIN_TEXT_W = 120;
+    const MIN_TEXT_H = 60;
+    /** A new text block starts at this size. */
+    const DEFAULT_TEXT_W = 200;
+    const DEFAULT_TEXT_H = 132;
+    /** Largest block allowed on the canvas. */
+    const MAX_BLOCK = 2400;
+    /** Geometry is only persisted after this much quiet time. */
+    const SAVE_DEBOUNCE_MS = 800;
 
     /** Simplified Chinese dictionary. */
     const zh = {
@@ -33,15 +51,25 @@ window.__ModuleLoader__.load({
       'header.count': '{count} 张',
       'action.add': '添加图片',
       'action.paste': '粘贴',
+      'action.text': '加文本',
       'action.download': '下载',
       'action.delete': '删除',
       'action.send': '发送到会话',
       'action.clear': '清空',
       'action.close': '关闭',
       'action.newBoard': '新建分组',
-      'action.rename': '重命名',
       'action.preview': '预览',
       'action.removeBoard': '删除分组',
+      'action.copyImage': '复制图片',
+      'action.copyText': '复制文本',
+      'action.saveImage': '另存为',
+      'action.bringFront': '置顶',
+      'action.sendBack': '置底',
+      'action.arrange': '整理',
+      'action.exportAll': '导出全部',
+      'action.confirmClear': '确认清空',
+      'action.grid': '网格背景',
+      'action.solid': '纯色背景',
       'board.all': '全部',
       'board.inbox': '未分类',
       'board.untitled': '未命名分组',
@@ -57,6 +85,7 @@ window.__ModuleLoader__.load({
       'error.noIntake': '当前界面没有可接收附件的输入框，请打开一个会话再试。',
       'error.noImages': '选中的图片已不在本地存储里，请重新添加。',
       'error.locked': '输入框正在提交，稍后再试一次。',
+      'error.noImage': '这张图已不在本地存储里，请重新添加。',
       'notice.sent': '已把 {count} 张图片放进输入框。',
       'notice.sentOne': '已把图片放进输入框。',
       'notice.deleted': '已从灵感墙移除。',
@@ -65,7 +94,14 @@ window.__ModuleLoader__.load({
       'notice.boardRemoved': '已删除分组，里面的图片移到了「未分类」。',
       'notice.renamed': '已重命名。',
       'notice.copied': '已复制图片到剪贴板。',
-      'notice.limit': '灵感墙最多保留 {limit} 张图片，请先删除一些。'
+      'notice.textCopied': '已复制文本。',
+      'notice.textSaved': '文本已保存。',
+      'notice.exported': '已导出 {count} 个文件。',
+      'notice.arranged': '已按当前顺序整理。',
+      'notice.limit': '灵感墙最多保留 {limit} 张图片，请先删除一些。',
+      'notice.exportEmpty': '当前分组没有可导出的内容。',
+      'text.placeholder': '在这里输入文本…',
+      'canvas.label': '灵感墙画布'
     };
     /** English dictionary, checked against the Chinese key set. */
     const en = {
@@ -75,15 +111,25 @@ window.__ModuleLoader__.load({
       'header.count': '{count}',
       'action.add': 'Add images',
       'action.paste': 'Paste',
+      'action.text': 'Add text',
       'action.download': 'Download',
       'action.delete': 'Delete',
       'action.send': 'Send to chat',
       'action.clear': 'Clear',
       'action.close': 'Close',
       'action.newBoard': 'New board',
-      'action.rename': 'Rename',
       'action.preview': 'Preview',
       'action.removeBoard': 'Remove board',
+      'action.copyImage': 'Copy image',
+      'action.copyText': 'Copy text',
+      'action.saveImage': 'Save as',
+      'action.bringFront': 'Bring to front',
+      'action.sendBack': 'Send to back',
+      'action.arrange': 'Arrange',
+      'action.exportAll': 'Export all',
+      'action.confirmClear': 'Confirm clear',
+      'action.grid': 'Grid background',
+      'action.solid': 'Solid background',
       'board.all': 'All',
       'board.inbox': 'Unfiled',
       'board.untitled': 'Untitled board',
@@ -99,6 +145,7 @@ window.__ModuleLoader__.load({
       'error.noIntake': 'There is no composer here that accepts attachments; open a conversation first.',
       'error.noImages': 'The selected images are no longer in local storage; add them again.',
       'error.locked': 'The composer is submitting; try again in a moment.',
+      'error.noImage': 'This image is no longer in local storage; add it again.',
       'notice.sent': 'Added {count} images to the composer.',
       'notice.sentOne': 'Added the image to the composer.',
       'notice.deleted': 'Removed from the wall.',
@@ -107,14 +154,21 @@ window.__ModuleLoader__.load({
       'notice.boardRemoved': 'Removed the board; its images are now unfiled.',
       'notice.renamed': 'Renamed.',
       'notice.copied': 'Copied the image to the clipboard.',
-      'notice.limit': 'The wall keeps at most {limit} images; remove some first.'
+      'notice.textCopied': 'Copied the text.',
+      'notice.textSaved': 'Text saved.',
+      'notice.exported': 'Exported {count} files.',
+      'notice.arranged': 'Arranged in the current order.',
+      'notice.limit': 'The wall keeps at most {limit} images; remove some first.',
+      'notice.exportEmpty': 'Nothing in this board can be exported.',
+      'text.placeholder': 'Type text here…',
+      'canvas.label': 'Moodboard canvas'
     };
 
     /** The style block this package owns, installed once per page. */
     const STYLE_ID = 'dsh-moodboard-wall/moodboard.css';
     const CSS = [
       '.mbw-root{display:flex;flex-direction:column;height:100%;min-height:0;color:var(--dsw-alias-label-primary);font-size:var(--dsh-content-font-size-secondary,13px);line-height:1.5;background:var(--dsw-specific-sidebar-fill,transparent);outline:none}',
-      '.mbw-header{display:flex;align-items:center;gap:8px;flex:none;padding:8px 12px;border-bottom:.5px solid var(--dsw-alias-border-l2)}',
+      '.mbw-header{display:flex;align-items:center;gap:6px;flex:none;flex-wrap:wrap;padding:8px 12px;border-bottom:.5px solid var(--dsw-alias-border-l2)}',
       '.mbw-title{font-weight:600;font-size:13px;white-space:nowrap}',
       '.mbw-count{color:var(--dsw-alias-label-secondary);font-size:11px;white-space:nowrap}',
       '.mbw-spacer{flex:1 1 auto;min-width:0}',
@@ -123,36 +177,47 @@ window.__ModuleLoader__.load({
       '.mbw-btn:disabled{opacity:.45;cursor:default}',
       '.mbw-btn[data-variant="primary"]{background:var(--dsw-alias-brand-primary);border-color:transparent;color:#fff}',
       '.mbw-btn[data-variant="primary"]:hover:not(:disabled){background:var(--dsw-alias-brand-primary);color:#fff}',
-      '.mbw-btn[data-variant="danger"]:hover:not(:disabled){color:var(--dsw-alias-state-error-primary)}',
+      '.mbw-btn[data-variant="danger"]{color:var(--dsw-alias-state-error-primary)}',
+      '.mbw-btn[data-variant="danger"][data-armed="true"]{background:var(--dsw-alias-state-error-primary);border-color:transparent;color:#fff}',
+      '.mbw-btn[data-active="true"]{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
       '.mbw-btn svg{width:13px;height:13px;flex:none}',
       '.mbw-boards{display:flex;align-items:center;gap:6px;flex:none;padding:8px 12px;overflow-x:auto;border-bottom:.5px solid var(--dsw-alias-border-l1)}',
       '.mbw-chip{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 10px;border-radius:999px;border:.5px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;cursor:pointer;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis}',
       '.mbw-chip:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
       '.mbw-chip[data-active="true"]{background:var(--dsw-alias-brand-primary);border-color:transparent;color:#fff}',
       '.mbw-chipInput{height:24px;width:110px;padding:0 8px;border-radius:999px;border:.5px solid var(--dsw-alias-brand-primary);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:12px;outline:none}',
-      '.mbw-body{flex:1 1 auto;min-height:0;overflow:auto;padding:10px 12px 16px}',
-      '.mbw-body[data-dragging="true"]{outline:1px dashed var(--dsw-alias-brand-primary);outline-offset:-6px}',
-      '.mbw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}',
-      '.mbw-tile{position:relative;border-radius:var(--dsw-radius-md,8px);overflow:hidden;background:var(--dsw-alias-bg-layer-2);border:.5px solid var(--dsw-alias-border-l1)}',
-      '.mbw-tile:hover{border-color:var(--dsw-alias-border-l2)}',
-      '.mbw-tile:focus-within{border-color:var(--dsw-alias-brand-primary)}',
-      '.mbw-thumbButton{display:block;width:100%;padding:0;border:0;background:transparent;cursor:zoom-in;aspect-ratio:1/1}',
-      '.mbw-thumb{width:100%;height:100%;object-fit:cover;display:block;background:var(--dsw-alias-bg-layer-2)}',
-      '.mbw-thumbPlaceholder{display:flex;align-items:center;justify-content:center;width:100%;height:100%;aspect-ratio:1/1;color:var(--dsw-alias-label-secondary)}',
-      '.mbw-tileTitle{position:absolute;left:0;right:0;bottom:0;padding:10px 6px 4px;font-size:11px;color:#fff;background:linear-gradient(to top,rgba(0,0,0,.72),rgba(0,0,0,0));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;text-align:left}',
-      '.mbw-tileBar{position:absolute;top:4px;right:4px;display:flex;gap:2px;opacity:0;transition:opacity .12s ease}',
-      '.mbw-tile:hover .mbw-tileBar,.mbw-tile:focus-within .mbw-tileBar{opacity:1}',
-      '.mbw-tileBtn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border:0;border-radius:var(--dsw-radius-sm,6px);background:rgba(0,0,0,.55);color:#fff;cursor:pointer}',
-      '.mbw-tileBtn:hover{background:rgba(0,0,0,.75)}',
-      '.mbw-tileBtn svg{width:13px;height:13px}',
-      '.mbw-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;height:100%;min-height:120px;text-align:center;color:var(--dsw-alias-label-secondary);padding:0 18px}',
+      '.mbw-notice{margin:0;padding:6px 12px;flex:none;font-size:11px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary);border-bottom:.5px solid var(--dsw-alias-border-l1)}',
+      '.mbw-notice[data-tone="error"]{color:var(--dsw-alias-state-error-primary)}',
+      '.mbw-notice[data-tone="success"]{color:var(--dsw-alias-state-success-primary)}',
+      '.mbw-canvas{flex:1 1 auto;min-height:0;position:relative;overflow:auto;overscroll-behavior:contain}',
+      '.mbw-canvas[data-dragging="true"]{outline:1px dashed var(--dsw-alias-brand-primary);outline-offset:-6px}',
+      '.mbw-canvas[data-background="grid"]{background-image:linear-gradient(to right,var(--dsw-alias-border-l1) 1px,transparent 1px),linear-gradient(to bottom,var(--dsw-alias-border-l1) 1px,transparent 1px);background-size:var(--mbw-grid-size,24px) var(--mbw-grid-size,24px);background-position:-1px -1px}',
+      '.mbw-canvas[data-background="solid"]{background-color:var(--dsw-alias-bg-layer-1)}',
+      '.mbw-stage{position:relative;width:100%;min-width:100%;min-height:100%;box-sizing:border-box}',
+      '.mbw-block{position:absolute;box-sizing:border-box;border-radius:var(--dsw-radius-md,8px);border:.5px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);overflow:hidden;touch-action:none}',
+      '.mbw-block:hover{border-color:var(--dsw-alias-border-l2)}',
+      '.mbw-block[data-selected="true"]{border-color:var(--dsw-alias-brand-primary);box-shadow:0 0 0 1px var(--dsw-alias-brand-primary)}',
+      '.mbw-block[data-dragging="true"]{opacity:.85}',
+      '.mbw-blockImage{display:block;width:100%;height:100%;object-fit:cover;background:var(--dsw-alias-bg-layer-2);pointer-events:none;-webkit-user-drag:none}',
+      '.mbw-blockText{width:100%;height:100%;margin:0;padding:8px 10px;box-sizing:border-box;border:0;background:transparent;color:var(--dsw-alias-label-primary);font:inherit;font-size:12px;line-height:1.5;resize:none;overflow:auto;white-space:pre-wrap;word-break:break-word;outline:none}',
+      '.mbw-blockTitle{position:absolute;left:0;right:0;bottom:0;padding:10px 6px 4px;font-size:11px;color:#fff;background:linear-gradient(to top,rgba(0,0,0,.72),rgba(0,0,0,0));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;text-align:left}',
+      '.mbw-blockBar{position:absolute;top:4px;right:4px;display:flex;gap:2px;opacity:0;transition:opacity .12s ease}',
+      '.mbw-block:hover .mbw-blockBar,.mbw-block:focus-within .mbw-blockBar,.mbw-block[data-selected="true"] .mbw-blockBar{opacity:1}',
+      '.mbw-blockBtn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border:0;border-radius:var(--dsw-radius-sm,6px);background:rgba(0,0,0,.55);color:#fff;cursor:pointer}',
+      '.mbw-blockBtn:hover{background:rgba(0,0,0,.75)}',
+      '.mbw-blockBtn svg{width:13px;height:13px}',
+      '.mbw-handle{position:absolute;right:0;bottom:0;width:14px;height:14px;cursor:nwse-resize;touch-action:none}',
+      '.mbw-handle:after{content:"";position:absolute;right:3px;bottom:3px;width:7px;height:7px;border-right:2px solid var(--dsw-alias-brand-primary);border-bottom:2px solid var(--dsw-alias-brand-primary);border-bottom-right-radius:2px}',
+      '.mbw-menu{position:fixed;z-index:60;min-width:132px;padding:4px;border-radius:var(--dsw-radius-md,8px);background:var(--dsw-alias-bg-overlay);border:.5px solid var(--dsw-alias-border-l2);box-shadow:0 8px 24px rgba(0,0,0,.24)}',
+      '.mbw-menuItem{display:flex;align-items:center;gap:8px;width:100%;height:28px;padding:0 8px;border:0;border-radius:var(--dsw-radius-sm,6px);background:transparent;color:var(--dsw-alias-label-primary);font:inherit;font-size:12px;text-align:left;cursor:pointer}',
+      '.mbw-menuItem:hover{background:var(--dsw-alias-interactive-bg-hover)}',
+      '.mbw-menuItem[data-variant="danger"]{color:var(--dsw-alias-state-error-primary)}',
+      '.mbw-menuItem svg{width:13px;height:13px;flex:none}',
+      '.mbw-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:180px;height:100%;text-align:center;color:var(--dsw-alias-label-secondary);padding:0 18px}',
       '.mbw-emptyTitle{color:var(--dsw-alias-label-primary);font-size:13px}',
       '.mbw-emptyBody{font-size:12px;max-width:280px}',
       '.mbw-emptyHint{font-size:11px;color:var(--dsw-alias-label-tertiary,var(--dsw-alias-label-secondary))}',
-      '.mbw-notice{margin:0 12px 8px;padding:6px 8px;border-radius:var(--dsw-radius-sm,6px);font-size:11px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary)}',
-      '.mbw-notice[data-tone="error"]{color:var(--dsw-alias-state-error-primary)}',
-      '.mbw-notice[data-tone="success"]{color:var(--dsw-alias-state-success-primary)}',
-      '.mbw-lightbox{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,.62)}',
+      '.mbw-lightbox{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,.62)}',
       '.mbw-lightboxPanel{position:relative;display:flex;flex-direction:column;gap:10px;max-width:min(760px,92vw);max-height:92vh;padding:12px;border-radius:var(--dsw-radius-lg,12px);background:var(--dsw-alias-bg-overlay);border:.5px solid var(--dsw-alias-border-l2)}',
       '.mbw-lightboxImage{max-width:100%;max-height:64vh;object-fit:contain;border-radius:var(--dsw-radius-sm,6px);background:var(--dsw-alias-bg-layer-1)}',
       '.mbw-lightboxRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}',
@@ -182,7 +247,7 @@ window.__ModuleLoader__.load({
 
     // ---------------------------------------------------------------- storage
 
-    /** Open (and migrate) the browser database that keeps the wall's images. */
+    /** Open (and migrate) the browser database that keeps the wall's records. */
     function openDatabase() {
       return new Promise((resolve, reject) => {
         if (typeof indexedDB === 'undefined') {
@@ -258,7 +323,7 @@ window.__ModuleLoader__.load({
       });
     }
 
-    /** Remove every record of one board, or every record when no board is named. */
+    /** Remove several records at once. */
     function removeRecords(ids) {
       if (ids.length === 0) return Promise.resolve();
       return withStore('readwrite', (store) => {
@@ -290,12 +355,42 @@ window.__ModuleLoader__.load({
       }
     }
 
-    /** A new board identity. */
+    /** Read the canvas preferences from browser storage. */
+    function readLayout() {
+      const fallback = { background: 'grid', gridSize: 24 };
+      try {
+        const raw = localStorage.getItem(LAYOUT_KEY);
+        if (raw === null) return fallback;
+        const parsed = JSON.parse(raw);
+        return {
+          background: parsed?.background === 'solid' ? 'solid' : 'grid',
+          gridSize: Number.isFinite(parsed?.gridSize) ? Math.min(96, Math.max(12, parsed.gridSize)) : fallback.gridSize
+        };
+      } catch {
+        return fallback;
+      }
+    }
+
+    /** Write the canvas preferences back to browser storage. */
+    function writeLayout(layout) {
+      try {
+        localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout));
+      } catch {
+        /* a full or disabled storage keeps the in-memory value only */
+      }
+    }
+
+    /** A new identity. */
     function newId(prefix) {
       const random = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
         ? crypto.randomUUID()
         : Math.random().toString(36).slice(2) + Date.now().toString(36);
       return prefix + '-' + random;
+    }
+
+    /** Clamp a number into a range. */
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
     }
 
     /** Read an image's pixel size without decoding it into the document. */
@@ -313,6 +408,51 @@ window.__ModuleLoader__.load({
       return { width: 0, height: 0 };
     }
 
+    /** Normalize one stored record into the canvas model. */
+    function materialize(record, url) {
+      const item = {
+        id: record.id,
+        type: record.type === 'text' ? 'text' : 'image',
+        board: typeof record.board === 'string' ? record.board : '',
+        title: typeof record.title === 'string' ? record.title : '',
+        content: typeof record.content === 'string' ? record.content : '',
+        width: Number.isFinite(record.width) ? record.width : DEFAULT_TEXT_W,
+        height: Number.isFinite(record.height) ? record.height : DEFAULT_TEXT_H,
+        x: Number.isFinite(record.x) ? record.x : 0,
+        y: Number.isFinite(record.y) ? record.y : 0,
+        zIndex: Number.isFinite(record.zIndex) ? record.zIndex : 1,
+        createTime: Number.isFinite(record.createTime) ? record.createTime : Date.now(),
+        url: url ?? '',
+        hasBlob: record.blob instanceof Blob,
+        blob: record.blob instanceof Blob ? record.blob : undefined
+      };
+      if (item.type === 'image') {
+        item.width = clamp(item.width, MIN_IMAGE, MAX_BLOCK);
+        item.height = clamp(item.height, MIN_IMAGE, MAX_BLOCK);
+      } else {
+        item.width = clamp(item.width, MIN_TEXT_W, MAX_BLOCK);
+        item.height = clamp(item.height, MIN_TEXT_H, MAX_BLOCK);
+      }
+      return item;
+    }
+
+    /** Strip the volatile fields a record must not persist. */
+    function persistable(item) {
+      return {
+        id: item.id,
+        type: item.type,
+        board: item.board,
+        title: item.title,
+        content: item.content,
+        width: item.width,
+        height: item.height,
+        x: item.x,
+        y: item.y,
+        zIndex: item.zIndex,
+        createTime: item.createTime
+      };
+    }
+
     // ------------------------------------------------------------------ state
 
     const wall = {
@@ -325,11 +465,12 @@ window.__ModuleLoader__.load({
         boards: [],
         activeBoard: ALL,
         previewId: null,
-        editing: false
+        background: 'grid',
+        gridSize: 24
       },
       listeners: new Set(),
       urls: new Map(),
-      sending: false
+      blobs: new Map()
     };
 
     /** The current immutable snapshot. */
@@ -364,6 +505,59 @@ window.__ModuleLoader__.load({
       return items.filter((item) => item.board === activeBoard);
     }
 
+    /** The next zIndex a new block takes. */
+    function nextZ() {
+      let top = 0;
+      for (const item of wall.snapshot.items) if (item.zIndex > top) top = item.zIndex;
+      return top + 1;
+    }
+
+    /** The lowest zIndex in force. */
+    function lowestZ() {
+      let low = 0;
+      for (const item of wall.snapshot.items) if (item.zIndex < low) low = item.zIndex;
+      return low;
+    }
+
+    /** Debounced write of every record, so a drag commits once. */
+    let saveTimer = 0;
+    let savePending = false;
+    function scheduleSave() {
+      savePending = true;
+      if (saveTimer !== 0) return;
+      saveTimer = window.setTimeout(() => {
+        saveTimer = 0;
+        if (!savePending) return;
+        savePending = false;
+        void flushSave();
+      }, SAVE_DEBOUNCE_MS);
+    }
+
+    /** Write every item's record back, keeping blobs untouched and dropping what was removed. */
+    async function flushSave() {
+      try {
+        const records = await readAllRecords();
+        const live = new Set(wall.snapshot.items.map((item) => item.id));
+        const byId = new Map(records.map((record) => [record.id, record]));
+        const writes = [];
+        for (const item of wall.snapshot.items) {
+          const existing = byId.get(item.id);
+          if (existing === undefined) continue;
+          const record = persistable(item);
+          if (existing.blob instanceof Blob) record.blob = existing.blob;
+          writes.push(record);
+        }
+        const drops = records.filter((record) => !live.has(record.id));
+        if (writes.length === 0 && drops.length === 0) return;
+        await withStore('readwrite', (store) => {
+          for (const record of writes) store.put(record);
+          for (const record of drops) store.delete(record.id);
+        });
+      } catch {
+        /* the in-memory layout stays authoritative; the next save retries */
+      }
+    }
+
     /** Load the wall's records and boards into the snapshot. */
     async function loadWall() {
       try {
@@ -374,13 +568,13 @@ window.__ModuleLoader__.load({
           if (blob instanceof Blob) {
             const url = URL.createObjectURL(blob);
             wall.urls.set(meta.id, url);
-            items.push({ ...meta, url });
-          } else {
-            items.push(meta);
+            wall.blobs.set(meta.id, blob);
           }
+          items.push(materialize(meta, wall.urls.get(meta.id) ?? ''));
         }
-        items.sort((left, right) => right.createdAt - left.createdAt);
-        publish({ status: 'ready', items, boards: readBoards(), error: '' });
+        items.sort((left, right) => left.createTime - right.createTime);
+        const layout = readLayout();
+        publish({ status: 'ready', items, boards: readBoards(), background: layout.background, gridSize: layout.gridSize, error: '' });
       } catch (error) {
         publish({
           status: 'error',
@@ -397,8 +591,38 @@ window.__ModuleLoader__.load({
       return false;
     }
 
+    /** Shrink an oversized image so the canvas and storage stay light. */
+    async function normalizeImage(blob) {
+      if (blob.size < 512 * 1024) return blob;
+      let bitmap;
+      try {
+        bitmap = await createImageBitmap(blob);
+      } catch {
+        return blob;
+      }
+      const longest = Math.max(bitmap.width, bitmap.height);
+      if (longest <= MAX_EDGE) {
+        bitmap.close();
+        return blob;
+      }
+      const scale = MAX_EDGE / longest;
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const context = canvas.getContext('2d');
+      if (context === null) {
+        bitmap.close();
+        return blob;
+      }
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+      const encoded = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (encoded === null) return blob;
+      return encoded.size < blob.size ? encoded : blob;
+    }
+
     /** Add image files to the wall. */
-    async function addFiles(files, board) {
+    async function addFiles(files, board, at) {
       const images = [...files].filter((file) => isImageFile(file));
       if (images.length === 0) return { added: 0, images: 0 };
       const room = MAX_ITEMS - wall.snapshot.items.length;
@@ -406,28 +630,79 @@ window.__ModuleLoader__.load({
       const accepted = images.slice(0, room);
       const created = [];
       for (const file of accepted) {
+        const blob = await normalizeImage(file);
         const id = newId('img');
-        const size = await readImageSize(file);
+        const size = await readImageSize(blob);
         const record = {
           id,
-          blob: file,
-          type: file.type || 'image/png',
-          size: file.size,
-          width: size.width,
-          height: size.height,
+          type: 'image',
+          blob,
           board: board ?? '',
           title: typeof file.name === 'string' ? file.name : '',
-          note: '',
-          createdAt: Date.now()
+          content: '',
+          width: size.width > 0 ? size.width : 240,
+          height: size.height > 0 ? size.height : 180,
+          x: 0,
+          y: 0,
+          zIndex: 1,
+          createTime: Date.now()
         };
         await writeRecord(record);
-        const url = URL.createObjectURL(file);
+        const url = URL.createObjectURL(blob);
         wall.urls.set(id, url);
-        const { blob, ...meta } = record;
-        created.push({ ...meta, url });
+        wall.blobs.set(id, blob);
+        created.push(materialize(fitInitial(record), url));
       }
-      publish({ items: [...created, ...wall.snapshot.items] });
+      publish({ items: [...wall.snapshot.items, ...created] });
+      if (at !== undefined) placeNew(created, at);
       return { added: created.length, images: images.length };
+    }
+
+    /** Fit a freshly recorded image into a readable opening size, keeping its aspect ratio. */
+    function fitInitial(record) {
+      if (record.type !== 'image' || record.width <= 0 || record.height <= 0) return record;
+      const longest = Math.max(record.width, record.height);
+      if (longest <= FIT_EDGE) return record;
+      const scale = FIT_EDGE / longest;
+      return { ...record, width: Math.round(record.width * scale), height: Math.round(record.height * scale) };
+    }
+
+    /** Add a text block. */
+    async function addText(board, at) {
+      if (wall.snapshot.items.length >= MAX_ITEMS) return undefined;
+      const id = newId('txt');
+      const record = {
+        id,
+        type: 'text',
+        board: board ?? '',
+        title: '',
+        content: '',
+        width: DEFAULT_TEXT_W,
+        height: DEFAULT_TEXT_H,
+        x: 0,
+        y: 0,
+        zIndex: 1,
+        createTime: Date.now()
+      };
+      await writeRecord(record);
+      const item = materialize(record);
+      publish({ items: [...wall.snapshot.items, item] });
+      if (at !== undefined) placeNew([item], at);
+      return id;
+    }
+
+    /** Give freshly added blocks a position and a place at the top of the stack. */
+    function placeNew(items, at) {
+      if (items.length === 0) return;
+      const top = nextZ();
+      const byId = new Map(items.map((item, index) => [item.id, {
+        ...item,
+        x: Math.max(0, Math.round(at.x + index * 16)),
+        y: Math.max(0, Math.round(at.y + index * 16)),
+        zIndex: top + index
+      }]));
+      publish({ items: wall.snapshot.items.map((item) => byId.get(item.id) ?? item) });
+      scheduleSave();
     }
 
     /** Remove one item from the wall. */
@@ -437,6 +712,7 @@ window.__ModuleLoader__.load({
         URL.revokeObjectURL(url);
         wall.urls.delete(id);
       }
+      wall.blobs.delete(id);
       await removeRecord(id);
       publish({
         items: wall.snapshot.items.filter((item) => item.id !== id),
@@ -444,18 +720,21 @@ window.__ModuleLoader__.load({
       });
     }
 
-    /** Update one item's metadata. */
-    function updateItem(id, patch) {
+    /** Update one item's geometry or metadata. */
+    function updateItem(id, patch, persist) {
       const item = wall.snapshot.items.find((entry) => entry.id === id);
       if (item === undefined) return;
       const next = { ...item, ...patch };
       publish({ items: wall.snapshot.items.map((entry) => (entry.id === id ? next : entry)) });
-      readAllRecords()
-        .then((records) => {
-          const found = records.find((entry) => entry.id === id);
-          if (found !== undefined) writeRecord({ ...found, ...patch });
-        })
-        .catch(() => {});
+      if (persist === false) return;
+      scheduleSave();
+    }
+
+    /** Move one item to the top or the bottom of the stack. */
+    function restack(id, edge) {
+      const zIndex = edge === 'front' ? nextZ() : Math.min(0, lowestZ() - 1);
+      updateItem(id, { zIndex }, false);
+      scheduleSave();
     }
 
     /** Remove every item of the board in force. */
@@ -468,9 +747,14 @@ window.__ModuleLoader__.load({
           URL.revokeObjectURL(url);
           wall.urls.delete(item.id);
         }
+        wall.blobs.delete(item.id);
       }
       await removeRecords(items.map((item) => item.id));
-      publish({ items: wall.snapshot.items.filter((item) => !items.some((removed) => removed.id === item.id)) });
+      const removed = new Set(items.map((item) => item.id));
+      publish({
+        items: wall.snapshot.items.filter((item) => !removed.has(item.id)),
+        previewId: removed.has(wall.snapshot.previewId) ? null : wall.snapshot.previewId
+      });
     }
 
     /** Create a board and make it the board in force. */
@@ -483,7 +767,7 @@ window.__ModuleLoader__.load({
       publish({ boards, activeBoard: board.id });
     }
 
-    /** Remove a board; its images become unfiled. */
+    /** Remove a board; its items become unfiled. */
     async function removeBoard(id) {
       const boards = wall.snapshot.boards.filter((board) => board.id !== id);
       writeBoards(boards);
@@ -492,20 +776,46 @@ window.__ModuleLoader__.load({
         activeBoard: wall.snapshot.activeBoard === id ? ALL : wall.snapshot.activeBoard,
         items: wall.snapshot.items.map((item) => (item.board === id ? { ...item, board: '' } : item))
       });
-      const records = await readAllRecords();
-      const moved = records.filter((record) => record.board === id);
-      if (moved.length === 0) return;
-      await withStore('readwrite', (store) => {
-        for (const record of moved) store.put({ ...record, board: '' });
-      });
+      scheduleSave();
     }
 
-    /** The blob of one item, read back from storage. */
+    /** The blob of one item, from memory or from storage. */
     async function blobOf(id) {
+      const held = wall.blobs.get(id);
+      if (held !== undefined) return held;
       const records = await readAllRecords();
       const record = records.find((entry) => entry.id === id);
       if (record === undefined || !(record.blob instanceof Blob)) return undefined;
+      wall.blobs.set(id, record.blob);
       return record.blob;
+    }
+
+    /** Tidy every visible block into a left-to-right, top-to-bottom flow. */
+    function arrangeVisible() {
+      const items = visibleItems().slice().sort((left, right) => left.createTime - right.createTime);
+      if (items.length === 0) return;
+      const widest = Math.max(...items.map((item) => item.width));
+      const columns = Math.max(1, Math.floor(560 / Math.max(1, widest)));
+      const byId = new Map();
+      let x = 0;
+      let y = 0;
+      let rowHeight = 0;
+      let column = 0;
+      for (const item of items) {
+        byId.set(item.id, { ...item, x, y });
+        rowHeight = Math.max(rowHeight, item.height);
+        column += 1;
+        if (column >= columns) {
+          column = 0;
+          x = 0;
+          y += rowHeight + 12;
+          rowHeight = 0;
+        } else {
+          x += item.width + 12;
+        }
+      }
+      publish({ items: wall.snapshot.items.map((item) => byId.get(item.id) ?? item) });
+      scheduleSave();
     }
 
     // -------------------------------------------------------------- composer
@@ -560,6 +870,24 @@ window.__ModuleLoader__.load({
       locked: 'error.locked'
     };
 
+    /** Download one blob under a file name. */
+    function downloadBlob(blob, name) {
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = name;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+
+    /** A safe file name for one item. */
+    function fileNameOf(item, extension) {
+      const base = (item.title || 'moodboard-' + item.id).replace(/[\\/:*?"<>|]+/g, '_').slice(0, 80);
+      return extension === undefined ? base : base + '.' + extension;
+    }
+
     // ------------------------------------------------------------- components
 
     /** A small glyph set drawn with the current ink. */
@@ -595,67 +923,219 @@ window.__ModuleLoader__.load({
     const IconClose = glyph([
       h('path', { d: 'M4 4l8 8M12 4l-8 8', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' })
     ]);
+    const IconText = glyph([
+      h('path', { d: 'M3.4 3.6h9.2M8 3.6v8.8M6 12.4h4', stroke: 'currentColor', strokeWidth: 1.3, strokeLinecap: 'round', strokeLinejoin: 'round' })
+    ]);
+    const IconCopy = glyph([
+      h('rect', { x: 5.4, y: 5.4, width: 7.2, height: 7.2, rx: 1.4, stroke: 'currentColor', strokeWidth: 1.3 }),
+      h('path', { d: 'M10.6 5.4V4.2a1.2 1.2 0 0 0-1.2-1.2H4.2A1.2 1.2 0 0 0 3 4.2v5.2a1.2 1.2 0 0 0 1.2 1.2h1.2', stroke: 'currentColor', strokeWidth: 1.3, strokeLinecap: 'round' })
+    ]);
+    const IconFront = glyph([
+      h('rect', { x: 2.6, y: 2.6, width: 7.4, height: 7.4, rx: 1.4, stroke: 'currentColor', strokeWidth: 1.2, opacity: 0.55 }),
+      h('rect', { x: 6, y: 6, width: 7.4, height: 7.4, rx: 1.4, stroke: 'currentColor', strokeWidth: 1.3 })
+    ]);
+    const IconBack = glyph([
+      h('rect', { x: 6, y: 6, width: 7.4, height: 7.4, rx: 1.4, stroke: 'currentColor', strokeWidth: 1.2, opacity: 0.55 }),
+      h('rect', { x: 2.6, y: 2.6, width: 7.4, height: 7.4, rx: 1.4, stroke: 'currentColor', strokeWidth: 1.3 })
+    ]);
+    const IconGrid = glyph([
+      h('path', { d: 'M2.6 2.6h10.8v10.8H2.6zM2.6 6.2h10.8M2.6 9.8h10.8M6.2 2.6v10.8M9.8 2.6v10.8', stroke: 'currentColor', strokeWidth: 1.1, strokeLinecap: 'round' })
+    ]);
+    const IconExport = glyph([
+      h('path', { d: 'M8 2.4v7M5.4 6.6L8 9.2l2.6-2.6M3.2 12.2h9.6', stroke: 'currentColor', strokeWidth: 1.3, strokeLinecap: 'round', strokeLinejoin: 'round' })
+    ]);
     const IconBoard = glyph([
-      h('rect', { x: '2.2', y: '3', width: '8', height: '6.4', rx: 1.2, stroke: 'currentColor', strokeWidth: 1.2 }),
-      h('rect', { x: '6.4', y: '6.6', width: '7.4', height: '6.4', rx: 1.2, stroke: 'currentColor', strokeWidth: 1.2 })
+      h('rect', { x: 2.2, y: 3, width: 8, height: 6.4, rx: 1.2, stroke: 'currentColor', strokeWidth: 1.2 }),
+      h('rect', { x: 6.4, y: 6.6, width: 7.4, height: 6.4, rx: 1.2, stroke: 'currentColor', strokeWidth: 1.2 })
     ]);
 
-    /** One tile of the wall. */
-    function Tile(props) {
-      const { item, t } = props;
+    /** One canvas block: an image or an editable text card. */
+    function Block(props) {
+      const { item, t, selected, limits, onSelect, onCommit, onOpenMenu, onPreview } = props;
+      const blockRef = useRef(null);
+
+      /** Begin a move or a resize; the gesture ends on the window. */
+      const begin = useCallback((event, mode) => {
+        if (event.button !== 0) return;
+        if (blockRef.current === null) return;
+        event.preventDefault();
+        event.stopPropagation();
+        onSelect(item.id);
+        const startX = event.clientX;
+        const startY = event.clientY;
+        const origin = { x: item.x, y: item.y, width: item.width, height: item.height };
+        const ratio = origin.height > 0 ? origin.width / origin.height : 1;
+        /** Keep a block inside the canvas: never left/above the origin, never past the right edge or the stage's floor. */
+        const bound = (next) => {
+          const width = Math.min(next.width, limits.width);
+          const height = Math.min(next.height, limits.height);
+          return {
+            ...next,
+            width,
+            height,
+            x: clamp(next.x, -width + 48, Math.max(0, limits.width - 48)),
+            y: clamp(next.y, 0, Math.max(0, limits.height - 48))
+          };
+        };
+        let latest = bound(origin);
+        let frame = 0;
+        const paint = () => {
+          frame = 0;
+          onCommit(item.id, latest);
+        };
+        const schedule = (next) => {
+          latest = bound(next);
+          if (frame === 0) frame = window.requestAnimationFrame(paint);
+        };
+        const onMove = (moveEvent) => {
+          const dx = moveEvent.clientX - startX;
+          const dy = moveEvent.clientY - startY;
+          if (mode === 'move') {
+            schedule({ ...origin, x: origin.x + dx, y: origin.y + dy });
+            return;
+          }
+          if (item.type === 'image') {
+            const width = clamp(origin.width + dx, MIN_IMAGE, MAX_BLOCK);
+            const height = clamp(Math.round(width / ratio), MIN_IMAGE, MAX_BLOCK);
+            schedule({ ...origin, width, height });
+            return;
+          }
+          schedule({
+            ...origin,
+            width: clamp(origin.width + dx, MIN_TEXT_W, MAX_BLOCK),
+            height: clamp(origin.height + dy, MIN_TEXT_H, MAX_BLOCK)
+          });
+        };
+        const onUp = () => {
+          window.removeEventListener('mousemove', onMove);
+          window.removeEventListener('mouseup', onUp);
+          if (frame !== 0) {
+            window.cancelAnimationFrame(frame);
+            frame = 0;
+          }
+          onCommit(item.id, latest);
+        };
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+      }, [item.id, item.type, item.x, item.y, item.width, item.height, limits, onCommit, onSelect]);
+
+      const image = item.type === 'image';
       return h(
         'div',
-        { className: 'mbw-tile', 'data-mbw-item': item.id },
-        h(
-          'button',
-          {
-            type: 'button',
-            className: 'mbw-thumbButton',
-            'aria-label': item.title || t('action.preview'),
-            onClick: () => props.onOpen(item.id)
+        {
+          ref: blockRef,
+          className: 'mbw-block',
+          'data-mbw-block': item.id,
+          'data-mbw-type': item.type,
+          'data-selected': String(selected),
+          style: { left: item.x + 'px', top: item.y + 'px', width: item.width + 'px', height: item.height + 'px', zIndex: item.zIndex },
+          onMouseDown: (event) => {
+            if (event.button !== 0) return;
+            if (event.target.closest('.mbw-blockBtn') !== null) return;
+            if (event.target.closest('.mbw-blockText') !== null) return;
+            begin(event, 'move');
           },
-          item.url
-            ? h('img', { className: 'mbw-thumb', src: item.url, alt: item.title || '' })
-            : h('span', { className: 'mbw-thumbPlaceholder' }, h(IconBoard, { size: 20 }))
-        ),
+          onContextMenu: (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onSelect(item.id);
+            onOpenMenu(item.id, event.clientX, event.clientY);
+          },
+          onDoubleClick: () => {
+            if (image) onPreview(item.id);
+          }
+        },
+        image
+          ? h('img', {
+            className: 'mbw-blockImage',
+            src: item.url,
+            alt: item.title || '',
+            draggable: false
+          })
+          : h('textarea', {
+            className: 'mbw-blockText',
+            value: item.content,
+            placeholder: t('text.placeholder'),
+            'aria-label': t('field.note'),
+            onMouseDown: (event) => event.stopPropagation(),
+            onChange: (event) => onCommit(item.id, { content: event.target.value }),
+            onBlur: () => onCommit(item.id, item.content, true)
+          }),
+        image && item.title ? h('span', { className: 'mbw-blockTitle' }, item.title) : null,
         h(
           'div',
-          { className: 'mbw-tileBar' },
+          { className: 'mbw-blockBar' },
+          image
+            ? h(
+              'button',
+              {
+                type: 'button',
+                className: 'mbw-blockBtn',
+                title: t('action.send'),
+                'aria-label': t('action.send'),
+                onMouseDown: (event) => event.stopPropagation(),
+                onClick: (event) => {
+                  event.stopPropagation();
+                  props.onSend([item.id]);
+                }
+              },
+              h(IconSend, {})
+            )
+            : null,
+          image
+            ? h(
+              'button',
+              {
+                type: 'button',
+                className: 'mbw-blockBtn',
+                title: t('action.copyImage'),
+                'aria-label': t('action.copyImage'),
+                onMouseDown: (event) => event.stopPropagation(),
+                onClick: (event) => {
+                  event.stopPropagation();
+                  void props.onCopyImage(item.id);
+                }
+              },
+              h(IconCopy, {})
+            )
+            : h(
+              'button',
+              {
+                type: 'button',
+                className: 'mbw-blockBtn',
+                title: t('action.copyText'),
+                'aria-label': t('action.copyText'),
+                onMouseDown: (event) => event.stopPropagation(),
+                onClick: (event) => {
+                  event.stopPropagation();
+                  void props.onCopyText(item.id);
+                }
+              },
+              h(IconCopy, {})
+            ),
           h(
             'button',
             {
               type: 'button',
-              className: 'mbw-tileBtn',
-              title: t('action.send'),
-              'aria-label': t('action.send'),
+              className: 'mbw-blockBtn',
+              title: t('action.bringFront'),
+              'aria-label': t('action.bringFront'),
+              onMouseDown: (event) => event.stopPropagation(),
               onClick: (event) => {
                 event.stopPropagation();
-                props.onSend([item.id]);
+                props.onStack(item.id, 'front');
               }
             },
-            h(IconSend, {})
+            h(IconFront, {})
           ),
           h(
             'button',
             {
               type: 'button',
-              className: 'mbw-tileBtn',
-              title: t('action.download'),
-              'aria-label': t('action.download'),
-              onClick: (event) => {
-                event.stopPropagation();
-                props.onDownload(item.id);
-              }
-            },
-            h(IconDownload, {})
-          ),
-          h(
-            'button',
-            {
-              type: 'button',
-              className: 'mbw-tileBtn',
+              className: 'mbw-blockBtn',
               title: t('action.delete'),
               'aria-label': t('action.delete'),
+              onMouseDown: (event) => event.stopPropagation(),
               onClick: (event) => {
                 event.stopPropagation();
                 props.onDelete(item.id);
@@ -664,40 +1144,146 @@ window.__ModuleLoader__.load({
             h(IconTrash, {})
           )
         ),
-        item.title ? h('span', { className: 'mbw-tileTitle' }, item.title) : null
+        h('div', {
+          className: 'mbw-handle',
+          role: 'presentation',
+          onMouseDown: (event) => begin(event, 'resize')
+        })
       );
     }
 
-    /** The wall's body: header, boards, grid, and the lightbox. */
+    /** The right-click menu for one block. */
+    function BlockMenu(props) {
+      const { item, t, x, y, onClose } = props;
+      const image = item.type === 'image';
+      const entries = [
+        image
+          ? { id: 'copy', label: t('action.copyImage'), icon: IconCopy, run: () => void props.onCopyImage(item.id) }
+          : { id: 'copy', label: t('action.copyText'), icon: IconCopy, run: () => void props.onCopyText(item.id) },
+        image ? { id: 'save', label: t('action.saveImage'), icon: IconDownload, run: () => void props.onDownload(item.id) } : null,
+        image ? { id: 'send', label: t('action.send'), icon: IconSend, run: () => void props.onSend([item.id]) } : null,
+        { id: 'front', label: t('action.bringFront'), icon: IconFront, run: () => props.onStack(item.id, 'front') },
+        { id: 'back', label: t('action.sendBack'), icon: IconBack, run: () => props.onStack(item.id, 'back') },
+        { id: 'delete', label: t('action.delete'), icon: IconTrash, danger: true, run: () => void props.onDelete(item.id) }
+      ].filter(Boolean);
+      useEffect(() => {
+        const onKey = (event) => {
+          if (event.key === 'Escape') onClose();
+        };
+        const close = () => onClose();
+        window.addEventListener('mousedown', close, { once: true });
+        window.addEventListener('resize', close);
+        document.addEventListener('keydown', onKey);
+        return () => {
+          window.removeEventListener('mousedown', close);
+          window.removeEventListener('resize', close);
+          document.removeEventListener('keydown', onKey);
+        };
+      }, [onClose]);
+      const width = 150;
+      const height = 8 + entries.length * 30;
+      const left = clamp(x, 8, Math.max(8, window.innerWidth - width - 8));
+      const top = clamp(y, 8, Math.max(8, window.innerHeight - height - 8));
+      return h(
+        'div',
+        {
+          className: 'mbw-menu',
+          role: 'menu',
+          style: { left: left + 'px', top: top + 'px' },
+          onMouseDown: (event) => event.stopPropagation()
+        },
+        entries.map((entry) =>
+          h(
+            'button',
+            {
+              type: 'button',
+              key: entry.id,
+              className: 'mbw-menuItem',
+              role: 'menuitem',
+              'data-variant': entry.danger ? 'danger' : undefined,
+              onClick: () => {
+                entry.run();
+                onClose();
+              }
+            },
+            h(entry.icon, {}),
+            h('span', {}, entry.label)
+          )
+        )
+      );
+    }
+
+    /** The wall's body: toolbar, boards, canvas, and the preview. */
     function MoodboardBody(props) {
       const { t, sessionId, inputActions, getConversation } = props;
       const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
       const [dragging, setDragging] = useState(false);
       const [newBoard, setNewBoard] = useState(false);
+      const [selectedId, setSelectedId] = useState(null);
+      const [menu, setMenu] = useState(null);
+      const [armed, setArmed] = useState(false);
       const rootRef = useRef(null);
       const fileRef = useRef(null);
-      const lightboxRef = useRef(null);
+      const stageRef = useRef(null);
+      const canvasRef = useRef(null);
+      /** The canvas' measured box, which bounds every block and sizes the stage. */
+      const [viewport, setViewport] = useState({ width: 0, height: 0 });
 
       useEffect(() => {
         void loadWall();
       }, []);
 
-      /** The board new images land in. */
+      /** Track the canvas' box so blocks stay inside it and the stage grows to hold them. */
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        if (canvas === null) return undefined;
+        const measure = () => {
+          setViewport((current) => {
+            const width = Math.round(canvas.clientWidth);
+            const height = Math.round(canvas.clientHeight);
+            return current.width === width && current.height === height ? current : { width, height };
+          });
+        };
+        measure();
+        if (typeof ResizeObserver === 'undefined') {
+          window.addEventListener('resize', measure);
+          return () => window.removeEventListener('resize', measure);
+        }
+        const observer = new ResizeObserver(measure);
+        observer.observe(canvas);
+        return () => observer.disconnect();
+      }, []);
+
+      /** The board new blocks land in. */
       const targetBoard = useCallback(() => {
         const active = snapshot.activeBoard;
         return active === ALL || active === INBOX ? '' : active;
       }, [snapshot.activeBoard]);
 
+      /** Where in canvas space a pointer — or the viewport's top-left — stands. */
+      const canvasPoint = useCallback((clientX, clientY) => {
+        const stage = stageRef.current;
+        const canvas = stageRef.current?.parentElement;
+        if (stage === null || canvas === null) return { x: 16, y: 16 };
+        const rect = stage.getBoundingClientRect();
+        const px = clientX === undefined ? rect.left + 16 : clientX;
+        const py = clientY === undefined ? rect.top + 16 : clientY;
+        return {
+          x: Math.max(0, Math.round(px - rect.left + canvas.scrollLeft)),
+          y: Math.max(0, Math.round(py - rect.top + canvas.scrollTop))
+        };
+      }, []);
+
       /** Add files that arrived by paste, drop, or the file picker. */
-      const accept = useCallback(async (files) => {
-        const result = await addFiles(files, targetBoard());
+      const accept = useCallback(async (files, at) => {
+        const result = await addFiles(files, targetBoard(), at);
         if (result.added === 0 && result.images > 0) {
           notify(t('notice.limit', { limit: MAX_ITEMS }), 'error');
         }
       }, [t, targetBoard]);
 
       /** Pull images off the system clipboard, or point at the keyboard path when the browser refuses. */
-      const paste = useCallback(async () => {
+      const paste = useCallback(async (at) => {
         const clipboard = navigator.clipboard;
         if (clipboard === undefined || typeof clipboard.read !== 'function') {
           rootRef.current?.focus();
@@ -717,7 +1303,7 @@ window.__ModuleLoader__.load({
             notify(t('empty.hint'), 'info');
             return;
           }
-          await accept(files);
+          await accept(files, at);
         } catch {
           rootRef.current?.focus();
           notify(t('empty.hint'), 'info');
@@ -740,27 +1326,104 @@ window.__ModuleLoader__.load({
         const item = snapshot.items.find((entry) => entry.id === id);
         if (item === undefined) return;
         const blob = await blobOf(id);
-        if (blob === undefined) return;
-        const url = URL.createObjectURL(blob);
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = item.title || 'moodboard-' + id;
-        document.body.appendChild(anchor);
-        anchor.click();
-        anchor.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 2000);
-      }, [snapshot.items]);
+        if (blob === undefined) {
+          notify(t('error.noImage'), 'error');
+          return;
+        }
+        const extension = IMAGE_EXTENSIONS[blob.type || 'image/png'] ?? 'png';
+        downloadBlob(blob, fileNameOf(item, extension));
+      }, [snapshot.items, t]);
 
-      /** Remove one image. */
+      /** Copy one image back onto the system clipboard. */
+      const copyImage = useCallback(async (id) => {
+        const item = snapshot.items.find((entry) => entry.id === id);
+        const blob = await blobOf(id);
+        if (item === undefined || blob === undefined) {
+          notify(t('error.noImage'), 'error');
+          return;
+        }
+        try {
+          const type = blob.type || 'image/png';
+          if (typeof ClipboardItem === 'undefined' || navigator.clipboard === undefined || typeof navigator.clipboard.write !== 'function') throw new Error('unsupported');
+          await navigator.clipboard.write([new ClipboardItem({ [type]: blob })]);
+          notify(t('notice.copied'), 'success');
+        } catch {
+          const extension = IMAGE_EXTENSIONS[blob.type || 'image/png'] ?? 'png';
+          downloadBlob(blob, fileNameOf(item, extension));
+          notify(t('notice.copied'), 'info');
+        }
+      }, [snapshot.items, t]);
+
+      /** Copy one text block's content. */
+      const copyText = useCallback(async (id) => {
+        const item = snapshot.items.find((entry) => entry.id === id);
+        if (item === undefined || item.content.trim() === '') return;
+        try {
+          if (navigator.clipboard !== undefined && typeof navigator.clipboard.writeText === 'function') {
+            await navigator.clipboard.writeText(item.content);
+            notify(t('notice.textCopied'), 'success');
+            return;
+          }
+        } catch {
+          /* fall through to the selection path */
+        }
+        const area = document.createElement('textarea');
+        area.value = item.content;
+        area.setAttribute('readonly', '');
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.appendChild(area);
+        area.select();
+        try {
+          document.execCommand('copy');
+          notify(t('notice.textCopied'), 'success');
+        } catch {
+          notify(t('error.storage', { message: 'clipboard' }), 'error');
+        }
+        area.remove();
+      }, [snapshot.items, t]);
+
+      /** Remove one block. */
       const remove = useCallback(async (id) => {
         await removeItem(id);
+        setSelectedId((current) => (current === id ? null : current));
         notify(t('notice.deleted'), 'info');
       }, [t]);
 
-      /** Clear the board in force. */
+      /** Clear the board in force, behind a two-step confirm. */
       const clear = useCallback(async () => {
+        if (!armed) {
+          setArmed(true);
+          return;
+        }
+        setArmed(false);
         await clearBoard();
         notify(t('notice.cleared'), 'info');
+      }, [armed, t]);
+
+      /** Export every image and text of the board in force. */
+      const exportAll = useCallback(async () => {
+        const items = visibleItems();
+        if (items.length === 0) {
+          notify(t('notice.exportEmpty'), 'info');
+          return;
+        }
+        let count = 0;
+        for (const item of items) {
+          if (item.type !== 'image') continue;
+          const blob = await blobOf(item.id);
+          if (blob === undefined) continue;
+          const extension = IMAGE_EXTENSIONS[blob.type || 'image/png'] ?? 'png';
+          downloadBlob(blob, fileNameOf(item, extension));
+          count += 1;
+        }
+        const texts = items.filter((item) => item.type === 'text' && item.content.trim() !== '');
+        if (texts.length > 0) {
+          const lines = texts.map((item) => '── ' + new Date(item.createTime).toLocaleString() + ' ──\n' + item.content);
+          downloadBlob(new Blob([lines.join('\n\n')], { type: 'text/plain;charset=utf-8' }), 'moodboard-texts.txt');
+          count += 1;
+        }
+        notify(t('notice.exported', { count }), 'success');
       }, [t]);
 
       /** Open the preview. */
@@ -771,6 +1434,17 @@ window.__ModuleLoader__.load({
       /** Close the preview. */
       const close = useCallback(() => {
         publish({ previewId: null });
+      }, []);
+
+      /** Commit one block's geometry or content. */
+      const commit = useCallback((id, patch, persist) => {
+        updateItem(id, patch, persist !== false);
+      }, []);
+
+      /** A click on empty canvas drops the selection. */
+      const onCanvasMouseDown = useCallback((event) => {
+        if (event.target.closest('[data-mbw-block]') !== null) return;
+        setSelectedId(null);
       }, []);
 
       useEffect(() => {
@@ -793,6 +1467,20 @@ window.__ModuleLoader__.load({
           ? t('board.inbox')
           : (snapshot.boards.find((board) => board.id === snapshot.activeBoard)?.name ?? t('board.untitled'));
 
+      /** The bounds every block obeys: the canvas' own box, floored at the panel's width. */
+      const limits = {
+        width: Math.max(240, viewport.width),
+        height: Math.max(240, viewport.height)
+      };
+      /** Grow the stage past the canvas' box so a block below the fold is reachable by scrolling. */
+      const stageStyle = items.length === 0
+        ? undefined
+        : {
+          minHeight: Math.max(limits.height, ...items.map((item) => item.y + item.height)) + 24 + 'px',
+          width: Math.max(limits.width, ...items.map((item) => item.x + item.width)) + 24 + 'px',
+          minWidth: '100%'
+        };
+
       return h(
         'div',
         {
@@ -805,9 +1493,16 @@ window.__ModuleLoader__.load({
               .filter((entry) => entry.kind === 'file' && entry.type.startsWith('image/'))
               .map((entry) => entry.getAsFile())
               .filter((file) => file !== null);
-            if (files.length === 0) return;
-            event.preventDefault();
-            void accept(files);
+            if (files.length > 0) {
+              event.preventDefault();
+              void accept(files, canvasPoint(event.clientX, event.clientY));
+              return;
+            }
+            const text = event.clipboardData?.getData('text/plain');
+            if (typeof text === 'string' && text.trim() !== '') {
+              event.preventDefault();
+              void addText(targetBoard(), canvasPoint(event.clientX, event.clientY));
+            }
           },
           onDragOver: (event) => {
             event.preventDefault();
@@ -818,7 +1513,7 @@ window.__ModuleLoader__.load({
             event.preventDefault();
             setDragging(false);
             const files = [...(event.dataTransfer?.files ?? [])];
-            if (files.length > 0) void accept(files);
+            if (files.length > 0) void accept(files, canvasPoint(event.clientX, event.clientY));
           }
         },
         h(
@@ -827,6 +1522,19 @@ window.__ModuleLoader__.load({
           h('span', { className: 'mbw-title' }, t('type.label')),
           h('span', { className: 'mbw-count' }, t('header.count', { count: snapshot.items.length })),
           h('span', { className: 'mbw-spacer' }),
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'mbw-btn',
+              title: t('action.text'),
+              onClick: () => void addText(targetBoard(), canvasPoint()).then((id) => {
+                if (id !== undefined) setSelectedId(id);
+              })
+            },
+            h(IconText, {}),
+            h('span', {}, t('action.text'))
+          ),
           h(
             'button',
             {
@@ -844,7 +1552,7 @@ window.__ModuleLoader__.load({
               type: 'button',
               className: 'mbw-btn',
               title: t('action.paste'),
-              onClick: () => void paste()
+              onClick: () => void paste(canvasPoint())
             },
             h('span', {}, t('action.paste'))
           ),
@@ -854,11 +1562,55 @@ window.__ModuleLoader__.load({
               type: 'button',
               className: 'mbw-btn',
               'data-variant': 'danger',
+              'data-armed': String(armed),
               title: t('action.clear'),
               disabled: items.length === 0,
               onClick: () => void clear()
             },
-            h('span', {}, t('action.clear'))
+            h(IconTrash, {}),
+            h('span', {}, armed ? t('action.confirmClear') : t('action.clear'))
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'mbw-btn',
+              title: t('action.exportAll'),
+              disabled: items.length === 0,
+              onClick: () => void exportAll()
+            },
+            h(IconExport, {}),
+            h('span', {}, t('action.exportAll'))
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'mbw-btn',
+              title: t('action.arrange'),
+              disabled: items.length === 0,
+              onClick: () => {
+                arrangeVisible();
+                notify(t('notice.arranged'), 'info');
+              }
+            },
+            h(IconGrid, {}),
+            h('span', {}, t('action.arrange'))
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'mbw-btn',
+              'data-active': String(snapshot.background === 'grid'),
+              title: snapshot.background === 'grid' ? t('action.grid') : t('action.solid'),
+              onClick: () => {
+                const background = snapshot.background === 'grid' ? 'solid' : 'grid';
+                writeLayout({ background, gridSize: snapshot.gridSize });
+                publish({ background });
+              }
+            },
+            h(IconGrid, {})
           ),
           h('input', {
             type: 'file',
@@ -869,7 +1621,7 @@ window.__ModuleLoader__.load({
             onChange: (event) => {
               const files = [...(event.target.files ?? [])];
               event.target.value = '';
-              if (files.length > 0) void accept(files);
+              if (files.length > 0) void accept(files, canvasPoint());
             }
           })
         ),
@@ -953,42 +1705,83 @@ window.__ModuleLoader__.load({
           : null,
         h(
           'div',
-          { className: 'mbw-body', 'data-dragging': String(dragging) },
-          snapshot.status === 'loading'
-            ? h('p', { className: 'mbw-empty' }, t('loading'))
-            : snapshot.status === 'error'
-              ? h('p', { className: 'mbw-empty' }, t('error.storage', { message: snapshot.error }))
-              : items.length === 0
-                ? h(
-                  'div',
-                  { className: 'mbw-empty' },
-                  h('span', { className: 'mbw-emptyTitle' }, t('empty.title')),
-                  h('span', { className: 'mbw-emptyBody' }, t('empty.body')),
-                  h('span', { className: 'mbw-emptyHint' }, t('empty.hint'))
-                )
-                : h(
-                  'div',
-                  { className: 'mbw-grid' },
-                  items.map((item) =>
-                    h(Tile, {
+          {
+            className: 'mbw-canvas',
+            ref: canvasRef,
+            'data-background': snapshot.background,
+            'data-dragging': String(dragging),
+            'data-mbw-canvas': 'true',
+            role: 'application',
+            'aria-label': t('canvas.label'),
+            style: { '--mbw-grid-size': snapshot.gridSize + 'px' },
+            onMouseDown: onCanvasMouseDown
+          },
+          h(
+            'div',
+            {
+              ref: stageRef,
+              className: 'mbw-stage',
+              'data-mbw-stage': 'true',
+              style: stageStyle
+            },
+            snapshot.status === 'loading'
+              ? h('p', { className: 'mbw-empty' }, t('loading'))
+              : snapshot.status === 'error'
+                ? h('p', { className: 'mbw-empty' }, t('error.storage', { message: snapshot.error }))
+                : items.length === 0
+                  ? h(
+                    'div',
+                    { className: 'mbw-empty' },
+                    h('span', { className: 'mbw-emptyTitle' }, t('empty.title')),
+                    h('span', { className: 'mbw-emptyBody' }, t('empty.body')),
+                    h('span', { className: 'mbw-emptyHint' }, t('empty.hint'))
+                  )
+                  : items.map((item) =>
+                    h(Block, {
                       key: item.id,
                       item,
                       t,
-                      onOpen: open,
+                      selected: selectedId === item.id,
+                      limits,
+                      onSelect: setSelectedId,
+                      onCommit: commit,
+                      onOpenMenu: (id, x, y) => setMenu({ id, x, y }),
+                      onPreview: open,
                       onSend: (ids) => void send(ids),
-                      onDelete: (id) => void remove(id),
-                      onDownload: (id) => void download(id)
+                      onDownload: (id) => void download(id),
+                      onCopyImage: (id) => void copyImage(id),
+                      onCopyText: (id) => void copyText(id),
+                      onStack: (id, edge) => restack(id, edge),
+                      onDelete: (id) => void remove(id)
                     })
                   )
-                )
+          )
         ),
+        menu === null
+          ? null
+          : (() => {
+            const item = snapshot.items.find((entry) => entry.id === menu.id);
+            if (item === undefined) return null;
+            return h(BlockMenu, {
+              item,
+              t,
+              x: menu.x,
+              y: menu.y,
+              onClose: () => setMenu(null),
+              onSend: (ids) => void send(ids),
+              onDownload: (id) => void download(id),
+              onCopyImage: (id) => void copyImage(id),
+              onCopyText: (id) => void copyText(id),
+              onStack: (id, edge) => restack(id, edge),
+              onDelete: (id) => void remove(id)
+            });
+          })(),
         preview === undefined
           ? null
           : h(
             'div',
             {
               className: 'mbw-lightbox',
-              ref: lightboxRef,
               role: 'dialog',
               'aria-modal': 'true',
               'aria-label': preview.title || t('action.preview'),
@@ -1065,6 +1858,16 @@ window.__ModuleLoader__.load({
                   },
                   h(IconDownload, {}),
                   h('span', {}, t('action.download'))
+                ),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'mbw-btn',
+                    onClick: () => void copyImage(preview.id)
+                  },
+                  h(IconCopy, {}),
+                  h('span', {}, t('action.copyImage'))
                 ),
                 h(
                   'button',
@@ -1148,8 +1951,14 @@ window.__ModuleLoader__.load({
         key: PLUGIN_ID
       }, MoodboardTitle)), 'moodboard: tab title');
       ctx.effect(() => () => {
+        if (saveTimer !== 0) {
+          window.clearTimeout(saveTimer);
+          saveTimer = 0;
+        }
+        void flushSave();
         for (const url of wall.urls.values()) URL.revokeObjectURL(url);
         wall.urls.clear();
+        wall.blobs.clear();
       }, 'moodboard: object urls');
     }
 
