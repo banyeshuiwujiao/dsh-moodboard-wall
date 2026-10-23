@@ -52,6 +52,7 @@ window.__ModuleLoader__.load({
       'action.add': '添加图片',
       'action.paste': '粘贴',
       'action.text': '加文本',
+      'action.move': '移动',
       'action.download': '下载',
       'action.delete': '删除',
       'action.send': '发送到会话',
@@ -112,6 +113,7 @@ window.__ModuleLoader__.load({
       'action.add': 'Add images',
       'action.paste': 'Paste',
       'action.text': 'Add text',
+      'action.move': 'Move',
       'action.download': 'Download',
       'action.delete': 'Delete',
       'action.send': 'Send to chat',
@@ -205,6 +207,8 @@ window.__ModuleLoader__.load({
       '.mbw-block:hover .mbw-blockBar,.mbw-block:focus-within .mbw-blockBar,.mbw-block[data-selected="true"] .mbw-blockBar{opacity:1}',
       '.mbw-blockBtn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;padding:0;border:0;border-radius:var(--dsw-radius-sm,6px);background:rgba(0,0,0,.55);color:#fff;cursor:pointer}',
       '.mbw-blockBtn:hover{background:rgba(0,0,0,.75)}',
+      '.mbw-blockBtn[data-action="move"]{cursor:grab}',
+      '.mbw-blockBtn[data-action="move"]:active{cursor:grabbing}',
       '.mbw-blockBtn svg{width:13px;height:13px}',
       '.mbw-handle{position:absolute;right:0;bottom:0;width:14px;height:14px;cursor:nwse-resize;touch-action:none}',
       '.mbw-handle:after{content:"";position:absolute;right:3px;bottom:3px;width:7px;height:7px;border-right:2px solid var(--dsw-alias-brand-primary);border-bottom:2px solid var(--dsw-alias-brand-primary);border-bottom-right-radius:2px}',
@@ -668,15 +672,16 @@ window.__ModuleLoader__.load({
     }
 
     /** Add a text block. */
-    async function addText(board, at) {
+    async function addText(board, at, initialText) {
       if (wall.snapshot.items.length >= MAX_ITEMS) return undefined;
       const id = newId('txt');
+      const text = typeof initialText === 'string' ? initialText : '';
       const record = {
         id,
         type: 'text',
         board: board ?? '',
         title: '',
-        content: '',
+        content: text,
         width: DEFAULT_TEXT_W,
         height: DEFAULT_TEXT_H,
         x: 0,
@@ -948,6 +953,15 @@ window.__ModuleLoader__.load({
       h('rect', { x: 2.2, y: 3, width: 8, height: 6.4, rx: 1.2, stroke: 'currentColor', strokeWidth: 1.2 }),
       h('rect', { x: 6.4, y: 6.6, width: 7.4, height: 6.4, rx: 1.2, stroke: 'currentColor', strokeWidth: 1.2 })
     ]);
+    const IconMove = glyph([
+      h('path', {
+        d: 'M8 2.2v11.6M2.2 8h11.6M8 2.2l-2 2M8 2.2l2 2M8 13.8l-2-2M8 13.8l2-2M2.2 8l2-2M2.2 8l2 2M13.8 8l-2-2M13.8 8l2 2',
+        stroke: 'currentColor',
+        strokeWidth: 1.25,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round'
+      })
+    ]);
 
     /** One canvas block: an image or an editable text card. */
     function Block(props) {
@@ -1064,6 +1078,23 @@ window.__ModuleLoader__.load({
         h(
           'div',
           { className: 'mbw-blockBar' },
+          !image
+            ? h(
+              'button',
+              {
+                type: 'button',
+                className: 'mbw-blockBtn',
+                'data-action': 'move',
+                title: t('action.move'),
+                'aria-label': t('action.move'),
+                onMouseDown: (event) => {
+                  event.stopPropagation();
+                  begin(event, 'move');
+                }
+              },
+              h(IconMove, {})
+            )
+            : null,
           image
             ? h(
               'button',
@@ -1281,33 +1312,57 @@ window.__ModuleLoader__.load({
         }
       }, [t, targetBoard]);
 
-      /** Pull images off the system clipboard, or point at the keyboard path when the browser refuses. */
+      /** Pull images or text off the system clipboard, or point at the keyboard path when the browser refuses. */
       const paste = useCallback(async (at) => {
         const clipboard = navigator.clipboard;
-        if (clipboard === undefined || typeof clipboard.read !== 'function') {
+        if (clipboard === undefined || (typeof clipboard.read !== 'function' && typeof clipboard.readText !== 'function')) {
           rootRef.current?.focus();
           notify(t('empty.hint'), 'info');
           return;
         }
         try {
-          const entries = await clipboard.read();
-          const files = [];
-          for (const entry of entries) {
-            if (typeof entry.type !== 'string' || !entry.type.startsWith('image/')) continue;
-            const blob = await entry.getType(entry.type);
-            files.push(new File([blob], 'moodboard-paste-' + files.length + '.' + (IMAGE_EXTENSIONS[entry.type] ?? 'png'), { type: entry.type }));
+          if (typeof clipboard.read === 'function') {
+            const entries = await clipboard.read();
+            const files = [];
+            let textFromItem = '';
+            for (const entry of entries) {
+              const types = Array.isArray(entry.types) ? entry.types : (entry.type ? [entry.type] : []);
+              for (const type of types) {
+                if (type.startsWith('image/')) {
+                  const blob = await entry.getType(type);
+                  files.push(new File([blob], 'moodboard-paste-' + files.length + '.' + (IMAGE_EXTENSIONS[type] ?? 'png'), { type }));
+                  break;
+                } else if (type === 'text/plain' && !textFromItem) {
+                  const blob = await entry.getType(type);
+                  textFromItem = await blob.text();
+                }
+              }
+            }
+            if (files.length > 0) {
+              await accept(files, at);
+              return;
+            }
+            if (typeof textFromItem === 'string' && textFromItem.trim() !== '') {
+              const id = await addText(targetBoard(), at, textFromItem);
+              if (id !== undefined) setSelectedId(id);
+              return;
+            }
           }
-          if (files.length === 0) {
-            rootRef.current?.focus();
-            notify(t('empty.hint'), 'info');
-            return;
+          if (typeof clipboard.readText === 'function') {
+            const text = await clipboard.readText();
+            if (typeof text === 'string' && text.trim() !== '') {
+              const id = await addText(targetBoard(), at, text);
+              if (id !== undefined) setSelectedId(id);
+              return;
+            }
           }
-          await accept(files, at);
+          rootRef.current?.focus();
+          notify(t('empty.hint'), 'info');
         } catch {
           rootRef.current?.focus();
           notify(t('empty.hint'), 'info');
         }
-      }, [t, accept]);
+      }, [t, accept, targetBoard]);
 
       /** Put images into the current conversation's draft. */
       const send = useCallback(async (ids) => {
@@ -1495,6 +1550,10 @@ window.__ModuleLoader__.load({
           tabIndex: 0,
           'data-mbw-wall': 'true',
           onPaste: (event) => {
+            const target = event.target;
+            if (target instanceof HTMLElement && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+              return;
+            }
             const files = [...(event.clipboardData?.items ?? [])]
               .filter((entry) => entry.kind === 'file' && entry.type.startsWith('image/'))
               .map((entry) => entry.getAsFile())
@@ -1507,7 +1566,9 @@ window.__ModuleLoader__.load({
             const text = event.clipboardData?.getData('text/plain');
             if (typeof text === 'string' && text.trim() !== '') {
               event.preventDefault();
-              void addText(targetBoard(), canvasPoint(event.clientX, event.clientY));
+              void addText(targetBoard(), canvasPoint(event.clientX, event.clientY), text).then((id) => {
+                if (id !== undefined) setSelectedId(id);
+              });
             }
           },
           onDragOver: (event) => {
@@ -1519,7 +1580,16 @@ window.__ModuleLoader__.load({
             event.preventDefault();
             setDragging(false);
             const files = [...(event.dataTransfer?.files ?? [])];
-            if (files.length > 0) void accept(files, canvasPoint(event.clientX, event.clientY));
+            if (files.length > 0) {
+              void accept(files, canvasPoint(event.clientX, event.clientY));
+              return;
+            }
+            const text = event.dataTransfer?.getData('text/plain');
+            if (typeof text === 'string' && text.trim() !== '') {
+              void addText(targetBoard(), canvasPoint(event.clientX, event.clientY), text).then((id) => {
+                if (id !== undefined) setSelectedId(id);
+              });
+            }
           }
         },
         h(
