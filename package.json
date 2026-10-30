@@ -1,9 +1,9 @@
 {
   "name": "dsh-moodboard-wall",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "灵感墙/截图中转箱：DSH 右侧栏的素材灵感墙，支持粘贴、拖放、分组整理与一键发送到会话。",
+  "description": "灵感墙/截图中转箱：DSH 右侧栏的素材灵感墙，支持粘贴、拖放、分组整理、图像编辑标注、格式尺寸转换与一键发送到会话。",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/banyeshuiwujiao/dsh-moodboard-wall.git"
