@@ -63,6 +63,33 @@ window.__ModuleLoader__.load({
       'action.removeBoard': '删除分组',
       'action.copyImage': '复制图片',
       'action.copyText': '复制文本',
+      'action.editImage': '编辑图片',
+      'edit.title': '图片编辑',
+      'edit.tab.annotate': '标记',
+      'edit.tab.resize': '尺寸',
+      'edit.tab.format': '格式',
+      'edit.tool.rect': '矩形',
+      'edit.tool.ellipse': '椭圆',
+      'edit.tool.arrow': '箭头',
+      'edit.tool.pen': '画笔',
+      'edit.tool.mosaic': '马赛克',
+      'edit.tool.text': '文字',
+      'edit.color': '颜色',
+      'edit.weight': '粗细',
+      'edit.undo': '撤销',
+      'edit.clearMarks': '清空标记',
+      'edit.width': '宽',
+      'edit.height': '高',
+      'edit.lockAspect': '锁定比例',
+      'edit.original': '原始尺寸',
+      'edit.format': '输出格式',
+      'edit.quality': '质量',
+      'edit.textPlaceholder': '输入文字后回车',
+      'edit.save': '保存到画布',
+      'edit.cancel': '取消',
+      'edit.result': '{width} × {height} · {type} · {size}',
+      'notice.edited': '已更新图片。',
+      'error.edit': '编辑失败：{message}',
       'action.saveImage': '另存为',
       'action.bringFront': '置顶',
       'action.sendBack': '置底',
@@ -124,6 +151,33 @@ window.__ModuleLoader__.load({
       'action.removeBoard': 'Remove board',
       'action.copyImage': 'Copy image',
       'action.copyText': 'Copy text',
+      'action.editImage': 'Edit image',
+      'edit.title': 'Edit image',
+      'edit.tab.annotate': 'Mark up',
+      'edit.tab.resize': 'Resize',
+      'edit.tab.format': 'Format',
+      'edit.tool.rect': 'Rectangle',
+      'edit.tool.ellipse': 'Ellipse',
+      'edit.tool.arrow': 'Arrow',
+      'edit.tool.pen': 'Pen',
+      'edit.tool.mosaic': 'Mosaic',
+      'edit.tool.text': 'Text',
+      'edit.color': 'Color',
+      'edit.weight': 'Thickness',
+      'edit.undo': 'Undo',
+      'edit.clearMarks': 'Clear marks',
+      'edit.width': 'Width',
+      'edit.height': 'Height',
+      'edit.lockAspect': 'Lock aspect ratio',
+      'edit.original': 'Original size',
+      'edit.format': 'Output format',
+      'edit.quality': 'Quality',
+      'edit.textPlaceholder': 'Type and press Enter',
+      'edit.save': 'Save to wall',
+      'edit.cancel': 'Cancel',
+      'edit.result': '{width} × {height} · {type} · {size}',
+      'notice.edited': 'Image updated.',
+      'error.edit': 'Editing failed: {message}',
       'action.saveImage': 'Save as',
       'action.bringFront': 'Bring to front',
       'action.sendBack': 'Send to back',
@@ -232,7 +286,30 @@ window.__ModuleLoader__.load({
       '.mbw-select{height:28px;padding:0 6px;border-radius:var(--dsw-radius-sm,6px);border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:12px}',
       '.mbw-close{position:absolute;top:8px;right:8px;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border:0;border-radius:var(--dsw-radius-sm,6px);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary);cursor:pointer}',
       '.mbw-close:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
-      '.mbw-close svg{width:14px;height:14px}'
+      '.mbw-close svg{width:14px;height:14px}',
+      '.mbw-editor{position:fixed;inset:0;z-index:80;display:flex;flex-direction:column;background:rgba(0,0,0,.72);font-family:system-ui}',
+      '.mbw-editorBar{display:flex;align-items:center;gap:6px;flex:none;flex-wrap:wrap;padding:8px 12px;background:var(--dsw-alias-bg-overlay);border-bottom:.5px solid var(--dsw-alias-border-l2)}',
+      '.mbw-editorTitle{font-size:13px;font-weight:600;color:var(--dsw-alias-label-primary);white-space:nowrap}',
+      '.mbw-editorSpacer{flex:1 1 auto;min-width:0}',
+      '.mbw-editorTabs{display:flex;gap:2px;flex:none;padding:6px 12px 0;background:var(--dsw-alias-bg-layer-1)}',
+      '.mbw-editorTab{height:26px;padding:0 12px;border:0;border-radius:var(--dsw-radius-sm,6px) var(--dsw-radius-sm,6px) 0 0;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:12px;cursor:pointer}',
+      '.mbw-editorTab:hover{color:var(--dsw-alias-label-primary)}',
+      '.mbw-editorTab[data-active="true"]{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}',
+      '.mbw-editorStage{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;padding:14px;overflow:auto}',
+      '.mbw-editorCanvas{display:block;max-width:min(1100px,92vw);max-height:60vh;background:#fff;cursor:crosshair;touch-action:none;box-shadow:0 8px 32px rgba(0,0,0,.5)}',
+      '.mbw-editorTools{display:flex;align-items:center;gap:4px}',
+      '.mbw-editorTool{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:.5px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-sm,6px);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer}',
+      '.mbw-editorTool:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
+      '.mbw-editorTool[data-active="true"]{background:var(--dsw-alias-brand-primary);border-color:transparent;color:#fff}',
+      '.mbw-editorTool svg{width:15px;height:15px}',
+      '.mbw-editorColor{width:28px;height:28px;padding:2px;border:.5px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-sm,6px);background:transparent;cursor:pointer}',
+      '.mbw-editorRange{width:78px;accent-color:var(--dsw-alias-brand-primary)}',
+      '.mbw-editorPanel{display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:none;padding:10px 12px;background:var(--dsw-alias-bg-layer-1);border-top:.5px solid var(--dsw-alias-border-l1)}',
+      '.mbw-editorField{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dsw-alias-label-secondary)}',
+      '.mbw-editorNum{width:84px;height:26px;padding:0 8px;border-radius:var(--dsw-radius-sm,6px);border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:12px;outline:none}',
+      '.mbw-editorNum:focus{border-color:var(--dsw-alias-brand-primary)}',
+      '.mbw-editorMeta{margin-left:auto;font-size:11px;color:var(--dsw-alias-label-tertiary,var(--dsw-alias-label-secondary))}',
+      '.mbw-editorTextBox{position:fixed;z-index:90;padding:4px 6px;font:13px system-ui;color:#111;background:#fff;border:1px solid var(--dsw-alias-brand-primary);border-radius:4px;outline:none;box-shadow:0 2px 10px rgba(0,0,0,.3)}'
     ].join('');
 
     /** Install this package's stylesheet once, and remove it when the plugin unloads. */
@@ -625,6 +702,173 @@ window.__ModuleLoader__.load({
       return encoded.size < blob.size ? encoded : blob;
     }
 
+    // -------------------------------------------------- image editing engine
+    //
+    // Ported from dsh-plugin-live-shot's browser annotator. One base bitmap plus
+    // an ordered list of primitive operations, replayed on every repaint. Every
+    // operation stores *image pixel* coordinates, so the marks stay put when the
+    // editing canvas is displayed at another size and when the image is resized
+    // on export.
+
+    /** The box covering two points, in image pixels. */
+    function boxOf(a, b) {
+      return {
+        x: Math.min(a.x, b.x),
+        y: Math.min(a.y, b.y),
+        width: Math.abs(a.x - b.x),
+        height: Math.abs(a.y - b.y)
+      };
+    }
+
+    /** Average one region into blocks, for the mosaic tool. */
+    function paintMosaic(context, rect, weight) {
+      const canvas = context.canvas;
+      const x = Math.max(0, Math.floor(rect.x));
+      const y = Math.max(0, Math.floor(rect.y));
+      const w = Math.min(canvas.width, Math.ceil(rect.x + rect.width)) - x;
+      const h = Math.min(canvas.height, Math.ceil(rect.y + rect.height)) - y;
+      if (w <= 0 || h <= 0) return;
+      const pixels = context.getImageData(x, y, w, h);
+      const step = Math.max(8, Math.round(weight * 4));
+      for (let by = 0; by < pixels.height; by += step) {
+        for (let bx = 0; bx < pixels.width; bx += step) {
+          let red = 0;
+          let green = 0;
+          let blue = 0;
+          let count = 0;
+          const bw = Math.min(step, pixels.width - bx);
+          const bh = Math.min(step, pixels.height - by);
+          for (let dy = 0; dy < bh; dy += 1) {
+            for (let dx = 0; dx < bw; dx += 1) {
+              const i = ((by + dy) * pixels.width + bx + dx) * 4;
+              red += pixels.data[i];
+              green += pixels.data[i + 1];
+              blue += pixels.data[i + 2];
+              count += 1;
+            }
+          }
+          context.fillStyle = `rgb(${Math.round(red / count)},${Math.round(green / count)},${Math.round(blue / count)})`;
+          context.fillRect(x + bx, y + by, bw, bh);
+        }
+      }
+    }
+
+    /** Paint one operation onto a 2D context. */
+    function paintOp(context, op) {
+      const points = op.points;
+      if (!Array.isArray(points) || points.length === 0) return;
+      const first = points[0];
+      const last = points[points.length - 1];
+      const rect = boxOf(first, last);
+      context.save();
+      context.strokeStyle = op.color;
+      context.fillStyle = op.color;
+      context.lineWidth = op.width;
+      context.lineCap = 'round';
+      context.lineJoin = 'round';
+      if (op.tool === 'rect') {
+        context.strokeRect(rect.x, rect.y, rect.width, rect.height);
+      } else if (op.tool === 'ellipse') {
+        context.beginPath();
+        context.ellipse(
+          rect.x + rect.width / 2,
+          rect.y + rect.height / 2,
+          Math.max(0.1, rect.width / 2),
+          Math.max(0.1, rect.height / 2),
+          0, 0, Math.PI * 2
+        );
+        context.stroke();
+      } else if (op.tool === 'arrow') {
+        const angle = Math.atan2(last.y - first.y, last.x - first.x);
+        const head = Math.max(12, op.width * 4);
+        context.beginPath();
+        context.moveTo(first.x, first.y);
+        context.lineTo(last.x, last.y);
+        context.stroke();
+        context.beginPath();
+        context.moveTo(last.x, last.y);
+        context.lineTo(last.x - head * Math.cos(angle - 0.45), last.y - head * Math.sin(angle - 0.45));
+        context.lineTo(last.x - head * Math.cos(angle + 0.45), last.y - head * Math.sin(angle + 0.45));
+        context.closePath();
+        context.fill();
+      } else if (op.tool === 'pen') {
+        context.beginPath();
+        context.moveTo(first.x, first.y);
+        for (const point of points) context.lineTo(point.x, point.y);
+        context.stroke();
+      } else if (op.tool === 'text') {
+        context.font = `${Math.round(op.width * 4 + 14)}px "Segoe UI", system-ui, sans-serif`;
+        context.textBaseline = 'top';
+        if (op.text) context.fillText(op.text, first.x, first.y);
+      } else if (op.tool === 'mosaic') {
+        paintMosaic(context, rect, op.width);
+      }
+      context.restore();
+    }
+
+    /** Replay the committed operations and the in-flight draft over the base bitmap. */
+    function renderEditorOps(context, base, ops, draft) {
+      context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+      if (base) context.drawImage(base, 0, 0);
+      for (const op of ops) paintOp(context, op);
+      if (draft) paintOp(context, draft);
+    }
+
+    /** Encode a canvas with the chosen media type and quality. */
+    function encodeCanvas(canvas, type, quality) {
+      return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob === null) {
+            reject(new Error('canvas encoding failed'));
+            return;
+          }
+          resolve(blob);
+        }, type, type === 'image/jpeg' || type === 'image/webp' ? quality : undefined);
+      });
+    }
+
+    /**
+     * Replace one image block's bytes in place.
+     *
+     * The wall keeps blobs in memory and their object URLs beside them, and the
+     * debounced save deliberately reuses the stored blob, so a replaced image
+     * has to be written straight through here instead of through scheduleSave.
+     * The block's own box follows the new aspect ratio so the picture stays
+     * uncropped. The item's title is updated to reflect the new image extension.
+     */
+    async function replaceImageBlob(id, blob) {
+      const item = wall.snapshot.items.find((entry) => entry.id === id);
+      if (item === undefined) return;
+      const previousUrl = wall.urls.get(id);
+      const size = await readImageSize(blob);
+      wall.blobs.set(id, blob);
+      const url = URL.createObjectURL(blob);
+      wall.urls.set(id, url);
+      if (previousUrl !== undefined) URL.revokeObjectURL(previousUrl);
+      const type = blob.type || 'image/png';
+      const extension = IMAGE_EXTENSIONS[type] ?? 'png';
+      let title = item.title;
+      if (typeof title === 'string' && title.trim() !== '') {
+        title = title.replace(/\.(png|jpe?g|gif|webp|bmp|avif|svg)$/i, '') + '.' + extension;
+      } else {
+        title = 'moodboard-' + id + '.' + extension;
+      }
+      const patch = { url, hasBlob: true, title };
+      if (size.width > 0 && size.height > 0) {
+        // Keep the block's width; adjust its height to the image's own aspect.
+        patch.height = clamp(Math.round(item.width * (size.height / size.width)), MIN_IMAGE, MAX_BLOCK);
+      }
+      updateItem(id, patch, false);
+      const next = wall.snapshot.items.find((entry) => entry.id === id) ?? { ...item, ...patch };
+      const record = persistable(next);
+      record.blob = blob;
+      try {
+        await writeRecord(record);
+      } catch {
+        /* the in-memory copy stays authoritative; a later save rewrites it */
+      }
+    }
+
     /** Add image files to the wall. */
     async function addFiles(files, board, at) {
       const images = [...files].filter((file) => isImageFile(file));
@@ -858,7 +1102,7 @@ window.__ModuleLoader__.load({
         files.push(new File([blob], 'moodboard-' + id + '.' + extension, { type }));
       }
       if (files.length === 0) throw new Error('noImages');
-      const drafts = conversation.createDrafts(sessionId, files);
+      const drafts = conversation.createDrafts(sessionId, files, true);
       if (!inputActions.addAttachments(drafts.map((draft) => draft.id))) {
         conversation.releaseDraftAttachments?.(drafts);
         throw new Error('locked');
@@ -887,10 +1131,14 @@ window.__ModuleLoader__.load({
       window.setTimeout(() => URL.revokeObjectURL(url), 2000);
     }
 
-    /** A safe file name for one item. */
+    /** A safe file name for one item, stripping any existing image extension before applying the target one. */
     function fileNameOf(item, extension) {
-      const base = (item.title || 'moodboard-' + item.id).replace(/[\\/:*?"<>|]+/g, '_').slice(0, 80);
-      return extension === undefined ? base : base + '.' + extension;
+      let base = (item.title || 'moodboard-' + item.id).replace(/[\\/:*?"<>|]+/g, '_').slice(0, 80);
+      if (extension !== undefined) {
+        base = base.replace(/\.(png|jpe?g|gif|webp|bmp|avif|svg)$/i, '');
+        return base + '.' + extension;
+      }
+      return base;
     }
 
     // ------------------------------------------------------------- components
@@ -928,6 +1176,10 @@ window.__ModuleLoader__.load({
     const IconClose = glyph([
       h('path', { d: 'M4 4l8 8M12 4l-8 8', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' })
     ]);
+    const IconEdit = glyph([
+      h('path', { d: 'M10.4 2.8l2.8 2.8-7.2 7.2-3.4.6.6-3.4z', stroke: 'currentColor', strokeWidth: 1.3, strokeLinejoin: 'round' }),
+      h('path', { d: 'M9.2 4l2.8 2.8', stroke: 'currentColor', strokeWidth: 1.3, strokeLinecap: 'round' })
+    ]);
     const IconText = glyph([
       h('path', { d: 'M3.4 3.6h9.2M8 3.6v8.8M6 12.4h4', stroke: 'currentColor', strokeWidth: 1.3, strokeLinecap: 'round', strokeLinejoin: 'round' })
     ]);
@@ -962,6 +1214,476 @@ window.__ModuleLoader__.load({
         strokeLinejoin: 'round'
       })
     ]);
+
+    /** The tools the annotation tab offers, with their glyph path. */
+    const EDITOR_TOOLS = [
+      { id: 'rect', key: 'edit.tool.rect', icon: 'M3 4h10v8H3z' },
+      { id: 'ellipse', key: 'edit.tool.ellipse', icon: 'M8 3.5c3 0 5 2 5 4.5s-2 4.5-5 4.5-5-2-5-4.5 2-4.5 5-4.5z' },
+      { id: 'arrow', key: 'edit.tool.arrow', icon: 'M3 13L12 4M12 4H8M12 4v4' },
+      { id: 'pen', key: 'edit.tool.pen', icon: 'M3 13l1-3 7-7 2 2-7 7-3 1z' },
+      { id: 'mosaic', key: 'edit.tool.mosaic', icon: 'M3 3h4v4H3zM9 3h4v4H9zM3 9h4v4H3zM9 9h4v4H9z' },
+      { id: 'text', key: 'edit.tool.text', icon: 'M4 3h8M8 3v10' }
+    ];
+
+    /** The output encoders this editor offers. */
+    const EDITOR_FORMATS = [
+      { id: 'image/png', label: 'PNG' },
+      { id: 'image/jpeg', label: 'JPEG' },
+      { id: 'image/webp', label: 'WebP' }
+    ];
+
+    /**
+     * Full-screen editor for one wall image: mark it up, resize it, and re-encode it.
+     *
+     * The canvas holds the image at its own pixel size and the operations live in
+     * that same coordinate space, so resizing only changes the export size: the
+     * composed bitmap is drawn into a second canvas at the target box.
+     */
+    function ImageEditor(props) {
+      const { t, item, blob, onError, onSave, onClose } = props;
+      const canvasRef = useRef(null);
+      const imageRef = useRef(null);
+      const textRef = useRef(null);
+      const ratioRef = useRef(1);
+      const [tab, setTab] = useState('annotate');
+      const [tool, setTool] = useState('rect');
+      const [color, setColor] = useState('#ff3b30');
+      const [weight, setWeight] = useState(3);
+      const [ops, setOps] = useState([]);
+      const [draft, setDraft] = useState(null);
+      const [natural, setNatural] = useState({ width: 0, height: 0 });
+      const [ready, setReady] = useState(false);
+      const [width, setWidth] = useState(0);
+      const [height, setHeight] = useState(0);
+      const [lock, setLock] = useState(true);
+      const initialFormat = blob instanceof Blob && typeof blob.type === 'string' && EDITOR_FORMATS.some((entry) => entry.id === blob.type)
+        ? blob.type
+        : 'image/png';
+      const [format, setFormat] = useState(initialFormat);
+      const [quality, setQuality] = useState(0.92);
+      const [estimate, setEstimate] = useState('');
+      const [busy, setBusy] = useState(false);
+      const opsRef = useRef(ops);
+      const draftRef = useRef(draft);
+      opsRef.current = ops;
+      draftRef.current = draft;
+
+      /** Load the block's bytes once and size the canvas to them. */
+      useEffect(() => {
+        let cancelled = false;
+        const canvas = canvasRef.current;
+        if (canvas === null || blob instanceof Blob === false) return undefined;
+        const url = URL.createObjectURL(blob);
+        const image = new Image();
+        image.onload = () => {
+          if (cancelled) return;
+          canvas.width = image.naturalWidth;
+          canvas.height = image.naturalHeight;
+          imageRef.current = image;
+          ratioRef.current = image.naturalWidth / Math.max(1, image.naturalHeight);
+          setNatural({ width: image.naturalWidth, height: image.naturalHeight });
+          setWidth(image.naturalWidth);
+          setHeight(image.naturalHeight);
+          setReady(true);
+          const context = canvas.getContext('2d');
+          if (context !== null) renderEditorOps(context, image, [], null);
+        };
+        image.onerror = () => {
+          if (!cancelled) onError(t('error.edit', { message: 'image decode failed' }));
+        };
+        image.src = url;
+        return () => {
+          cancelled = true;
+          URL.revokeObjectURL(url);
+        };
+      }, [blob, onError, t]);
+
+      /** Repaint whenever the committed operations or the draft change. */
+      useEffect(() => {
+        if (!ready) return;
+        const canvas = canvasRef.current;
+        const context = canvas === null ? null : canvas.getContext('2d');
+        if (canvas === null || context === null) return;
+        renderEditorOps(context, imageRef.current, ops, draft);
+      }, [ops, draft, ready]);
+
+      /** Escape closes the editor. */
+      useEffect(() => {
+        const onKey = (event) => {
+          if (event.key === 'Escape' && textRef.current?.hidden === true) onClose();
+        };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+      }, [onClose]);
+
+      /** Map a pointer position into image pixel coordinates. */
+      const imagePoint = useCallback((event) => {
+        const canvas = canvasRef.current;
+        if (canvas === null) return { x: 0, y: 0 };
+        const box = canvas.getBoundingClientRect();
+        return {
+          x: clamp(((event.clientX - box.left) * canvas.width) / box.width, 0, canvas.width),
+          y: clamp(((event.clientY - box.top) * canvas.height) / box.height, 0, canvas.height)
+        };
+      }, []);
+
+      /** Commit the pending text operation. */
+      const commitText = useCallback(() => {
+        const field = textRef.current;
+        if (field === null || field.hidden) return;
+        const value = field.value.trim();
+        const current = draftRef.current;
+        field.hidden = true;
+        if (current === null) return;
+        if (value !== '') setOps((existing) => [...existing, { ...current, text: value }]);
+        setDraft(null);
+      }, []);
+
+      /** Begin a stroke or place the text box. */
+      const onPointerDown = useCallback((event) => {
+        if (!ready || event.button !== 0) return;
+        const canvas = canvasRef.current;
+        if (canvas === null) return;
+        event.preventDefault();
+        // Pointer capture throws once the id is no longer active (a synthetic
+        // event, or a pointer released between dispatch and handling), and an
+        // uncaught throw here would drop the whole stroke.
+        try { canvas.setPointerCapture(event.pointerId); } catch { /* the stroke still tracks */ }
+        const point = imagePoint(event);
+        const box = canvas.getBoundingClientRect();
+        const scale = box.width > 0 ? canvas.width / box.width : 1;
+        const operation = { tool, points: [point], color, width: Math.max(1, weight * scale) };
+        setDraft(operation);
+        if (tool === 'text') {
+          const field = textRef.current;
+          if (field !== null) {
+            field.value = '';
+            field.style.left = `${clamp(event.clientX, 8, window.innerWidth - 240)}px`;
+            field.style.top = `${clamp(event.clientY, 8, window.innerHeight - 48)}px`;
+            field.hidden = false;
+            field.focus();
+          }
+        }
+      }, [ready, tool, color, weight, imagePoint]);
+
+      /** Extend the in-flight stroke. */
+      const onPointerMove = useCallback((event) => {
+        const current = draftRef.current;
+        if (current === null || current.tool === 'text') return;
+        const point = imagePoint(event);
+        if (current.tool === 'pen') setDraft({ ...current, points: [...current.points, point] });
+        else setDraft({ ...current, points: [current.points[0], point] });
+      }, [imagePoint]);
+
+      /** Finish the in-flight stroke. */
+      const onPointerUp = useCallback(() => {
+        const current = draftRef.current;
+        if (current === null) return;
+        setDraft(null);
+        if (current.tool === 'text') return;
+        setOps((existing) => [...existing, current]);
+      }, []);
+
+      /** Compose the base bitmap, the marks, and the export box into one blob. */
+      const compose = useCallback(async () => {
+        const canvas = canvasRef.current;
+        if (canvas === null) return undefined;
+        const targetWidth = clamp(Math.round(width) || canvas.width, 1, 8192);
+        const targetHeight = clamp(Math.round(height) || canvas.height, 1, 8192);
+        const resized = targetWidth !== canvas.width || targetHeight !== canvas.height;
+        // JPEG has no alpha, so anything transparent would come out black:
+        // flatten the picture onto white whenever it is not preserved.
+        const flatten = format === 'image/jpeg';
+        if (!resized && !flatten) return encodeCanvas(canvas, format, quality);
+        const output = document.createElement('canvas');
+        output.width = targetWidth;
+        output.height = targetHeight;
+        const context = output.getContext('2d');
+        if (context === null) return undefined;
+        if (flatten) {
+          context.fillStyle = '#fff';
+          context.fillRect(0, 0, targetWidth, targetHeight);
+        }
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
+        context.drawImage(canvas, 0, 0, targetWidth, targetHeight);
+        return encodeCanvas(output, format, quality);
+      }, [format, quality, width, height]);
+
+      /** Keep the estimate honest without encoding on every keystroke. */
+      useEffect(() => {
+        if (!ready) return undefined;
+        let cancelled = false;
+        const timer = window.setTimeout(() => {
+          void compose().then((result) => {
+            if (cancelled || result === undefined) return;
+            const kilobytes = result.size / 1024;
+            const size = kilobytes >= 1024
+              ? (kilobytes / 1024).toFixed(1) + ' MB'
+              : Math.max(1, Math.round(kilobytes)) + ' KB';
+            const label = EDITOR_FORMATS.find((entry) => entry.id === format)?.label ?? 'PNG';
+            setEstimate(t('edit.result', {
+              width: clamp(Math.round(width) || natural.width, 1, 8192),
+              height: clamp(Math.round(height) || natural.height, 1, 8192),
+              type: label,
+              size
+            }));
+          }).catch(() => { /* the estimate is advisory only */ });
+        }, 600);
+        return () => {
+          cancelled = true;
+          window.clearTimeout(timer);
+        };
+      }, [ready, compose, width, height, format, natural.width, natural.height, t, ops]);
+
+      /** Save the composed bytes back to the block. */
+      const save = useCallback(async () => {
+        if (busy) return;
+        setBusy(true);
+        try {
+          const result = await compose();
+          if (result === undefined) throw new Error('nothing to encode');
+          onSave(result);
+        } catch (error) {
+          onError(t('error.edit', { message: error instanceof Error ? error.message : String(error) }));
+        } finally {
+          setBusy(false);
+        }
+      }, [busy, compose, onSave, onError, t]);
+
+      /** Apply a width the user typed, keeping the aspect when it is locked. */
+      const changeWidth = useCallback((value) => {
+        const next = clamp(Math.round(Number(value)) || 1, 1, 8192);
+        setWidth(next);
+        if (lock) setHeight(clamp(Math.round(next / Math.max(0.0001, ratioRef.current)), 1, 8192));
+      }, [lock]);
+
+      /** Apply a height the user typed, keeping the aspect when it is locked. */
+      const changeHeight = useCallback((value) => {
+        const next = clamp(Math.round(Number(value)) || 1, 1, 8192);
+        setHeight(next);
+        if (lock) setWidth(clamp(Math.round(next * ratioRef.current), 1, 8192));
+      }, [lock]);
+
+      const lossy = format !== 'image/png';
+
+      return h(
+        'div',
+        { className: 'mbw-editor', role: 'dialog', 'aria-modal': 'true', 'aria-label': t('edit.title') },
+        h(
+          'div',
+          { className: 'mbw-editorBar' },
+          h('span', { className: 'mbw-editorTitle' }, item.title || t('edit.title')),
+          h('span', { className: 'mbw-editorSpacer' }),
+          h('button', { type: 'button', className: 'mbw-btn', onClick: onClose }, t('edit.cancel')),
+          h(
+            'button',
+            {
+              type: 'button',
+              className: 'mbw-btn',
+              'data-variant': 'primary',
+              disabled: busy || !ready,
+              onClick: () => { commitText(); void save(); }
+            },
+            busy ? '…' : t('edit.save')
+          )
+        ),
+        h(
+          'div',
+          { className: 'mbw-editorTabs' },
+          [
+            { id: 'annotate', label: t('edit.tab.annotate') },
+            { id: 'resize', label: t('edit.tab.resize') },
+            { id: 'format', label: t('edit.tab.format') }
+          ].map((entry) =>
+            h(
+              'button',
+              {
+                key: entry.id,
+                type: 'button',
+                className: 'mbw-editorTab',
+                'data-active': String(tab === entry.id),
+                onClick: () => { commitText(); setTab(entry.id); }
+              },
+              entry.label
+            )
+          )
+        ),
+        h(
+          'div',
+          { className: 'mbw-editorStage' },
+          h('canvas', {
+            ref: canvasRef,
+            className: 'mbw-editorCanvas',
+            'data-tool': tab === 'annotate' ? tool : 'none',
+            style: tab === 'annotate' ? undefined : { cursor: 'default' },
+            onPointerDown: tab === 'annotate' ? onPointerDown : undefined,
+            onPointerMove: tab === 'annotate' ? onPointerMove : undefined,
+            onPointerUp: tab === 'annotate' ? onPointerUp : undefined,
+            onPointerCancel: tab === 'annotate' ? onPointerUp : undefined
+          })
+        ),
+        tab === 'annotate'
+          ? h(
+            'div',
+            { className: 'mbw-editorPanel' },
+            h(
+              'div',
+              { className: 'mbw-editorTools' },
+              EDITOR_TOOLS.map((entry) =>
+                h(
+                  'button',
+                  {
+                    key: entry.id,
+                    type: 'button',
+                    className: 'mbw-editorTool',
+                    title: t(entry.key),
+                    'aria-label': t(entry.key),
+                    'data-active': String(tool === entry.id),
+                    onClick: () => { commitText(); setTool(entry.id); }
+                  },
+                  h('svg', { width: 15, height: 15, viewBox: '0 0 16 16', fill: 'none', 'aria-hidden': 'true' },
+                    h('path', { d: entry.icon, stroke: 'currentColor', strokeWidth: 1.3, strokeLinecap: 'round', strokeLinejoin: 'round' }))
+                )
+              )
+            ),
+            h('input', {
+              type: 'color',
+              className: 'mbw-editorColor',
+              title: t('edit.color'),
+              'aria-label': t('edit.color'),
+              value: color,
+              onChange: (event) => setColor(event.target.value)
+            }),
+            h('input', {
+              type: 'range',
+              className: 'mbw-editorRange',
+              min: 1,
+              max: 10,
+              value: weight,
+              title: t('edit.weight'),
+              'aria-label': t('edit.weight'),
+              onChange: (event) => setWeight(Number(event.target.value))
+            }),
+            h('button', {
+              type: 'button',
+              className: 'mbw-btn',
+              disabled: ops.length === 0,
+              onClick: () => setOps((existing) => existing.slice(0, -1))
+            }, t('edit.undo')),
+            h('button', {
+              type: 'button',
+              className: 'mbw-btn',
+              disabled: ops.length === 0,
+              onClick: () => setOps([])
+            }, t('edit.clearMarks')),
+            estimate ? h('span', { className: 'mbw-editorMeta' }, estimate) : null
+          )
+          : tab === 'resize'
+            ? h(
+              'div',
+              { className: 'mbw-editorPanel' },
+              h(
+                'label',
+                { className: 'mbw-editorField' },
+                t('edit.width'),
+                h('input', {
+                  type: 'number',
+                  className: 'mbw-editorNum',
+                  min: 1,
+                  max: 8192,
+                  value: width,
+                  onChange: (event) => changeWidth(event.target.value)
+                })
+              ),
+              h(
+                'label',
+                { className: 'mbw-editorField' },
+                t('edit.height'),
+                h('input', {
+                  type: 'number',
+                  className: 'mbw-editorNum',
+                  min: 1,
+                  max: 8192,
+                  value: height,
+                  onChange: (event) => changeHeight(event.target.value)
+                })
+              ),
+              h(
+                'label',
+                { className: 'mbw-editorField' },
+                h('input', {
+                  type: 'checkbox',
+                  checked: lock,
+                  onChange: (event) => setLock(event.target.checked)
+                }),
+                t('edit.lockAspect')
+              ),
+              h('button', {
+                type: 'button',
+                className: 'mbw-btn',
+                onClick: () => { setWidth(natural.width); setHeight(natural.height); }
+              }, t('edit.original')),
+              estimate ? h('span', { className: 'mbw-editorMeta' }, estimate) : null
+            )
+            : h(
+              'div',
+              { className: 'mbw-editorPanel' },
+              h(
+                'label',
+                { className: 'mbw-editorField' },
+                t('edit.format'),
+                h(
+                  'select',
+                  {
+                    className: 'mbw-select',
+                    value: format,
+                    onChange: (event) => setFormat(event.target.value)
+                  },
+                  EDITOR_FORMATS.map((entry) => h('option', { key: entry.id, value: entry.id }, entry.label))
+                )
+              ),
+              lossy
+                ? h(
+                  'label',
+                  { className: 'mbw-editorField' },
+                  t('edit.quality'),
+                  h('input', {
+                    type: 'range',
+                    className: 'mbw-editorRange',
+                    min: 0.4,
+                    max: 1,
+                    step: 0.02,
+                    value: quality,
+                    onChange: (event) => setQuality(Number(event.target.value))
+                  }),
+                  h('span', {}, Math.round(quality * 100) + '%')
+                )
+                : null,
+              estimate ? h('span', { className: 'mbw-editorMeta' }, estimate) : null
+            ),
+        h('input', {
+          ref: textRef,
+          type: 'text',
+          className: 'mbw-editorTextBox',
+          placeholder: t('edit.textPlaceholder'),
+          'aria-label': t('edit.tool.text'),
+          hidden: true,
+          onKeyDown: (event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              commitText();
+            } else if (event.key === 'Escape') {
+              event.preventDefault();
+              event.stopPropagation();
+              if (textRef.current !== null) textRef.current.hidden = true;
+              setDraft(null);
+            }
+          },
+          onBlur: commitText
+        })
+      );
+    }
 
     /** One canvas block: an image or an editable text card. */
     function Block(props) {
@@ -1101,6 +1823,24 @@ window.__ModuleLoader__.load({
               {
                 type: 'button',
                 className: 'mbw-blockBtn',
+                'data-action': 'edit',
+                title: t('action.editImage'),
+                'aria-label': t('action.editImage'),
+                onMouseDown: (event) => event.stopPropagation(),
+                onClick: (event) => {
+                  event.stopPropagation();
+                  props.onEdit(item.id);
+                }
+              },
+              h(IconEdit, {})
+            )
+            : null,
+          image
+            ? h(
+              'button',
+              {
+                type: 'button',
+                className: 'mbw-blockBtn',
                 title: t('action.send'),
                 'aria-label': t('action.send'),
                 onMouseDown: (event) => event.stopPropagation(),
@@ -1187,6 +1927,7 @@ window.__ModuleLoader__.load({
       const { item, t, x, y, onClose } = props;
       const image = item.type === 'image';
       const entries = [
+        image ? { id: 'edit', label: t('action.editImage'), icon: IconEdit, run: () => void props.onEdit(item.id) } : null,
         image
           ? { id: 'copy', label: t('action.copyImage'), icon: IconCopy, run: () => void props.onCopyImage(item.id) }
           : { id: 'copy', label: t('action.copyText'), icon: IconCopy, run: () => void props.onCopyText(item.id) },
@@ -1251,6 +1992,8 @@ window.__ModuleLoader__.load({
       const [newBoard, setNewBoard] = useState(false);
       const [selectedId, setSelectedId] = useState(null);
       const [menu, setMenu] = useState(null);
+      /** `{ id, item, blob }` of the block open in the image editor, if any. */
+      const [editing, setEditing] = useState(null);
       const [armed, setArmed] = useState(false);
       const rootRef = useRef(null);
       const fileRef = useRef(null);
@@ -1408,9 +2151,37 @@ window.__ModuleLoader__.load({
         }
       }, [snapshot.items, t]);
 
-      /** Copy one text block's content. */
-      const copyText = useCallback(async (id) => {
+      /** Open one image block in the editor. */
+      const openEditor = useCallback(async (id) => {
         const item = snapshot.items.find((entry) => entry.id === id);
+        if (item === undefined || item.type !== 'image') return;
+        const blob = await blobOf(id);
+        if (blob === undefined) {
+          notify(t('error.noImage'), 'error');
+          return;
+        }
+        setEditing({ id, item, blob });
+      }, [snapshot.items, t]);
+
+      /** Close the editor without touching the block. */
+      const closeEditor = useCallback(() => setEditing(null), []);
+
+      /** Write the edited bytes back to the block that opened the editor. */
+      const saveEdit = useCallback(async (blob) => {
+        const target = editing;
+        setEditing(null);
+        if (target === null) return;
+        await replaceImageBlob(target.id, blob);
+        notify(t('notice.edited'), 'success');
+      }, [editing, t]);
+
+      /** Report one editor failure in the panel's notice row. */
+      const reportEditError = useCallback((message) => {
+        notify(message, 'error');
+      }, []);
+
+      /** Copy one text block's content. */
+      const copyText = useCallback(async (id) => {        const item = snapshot.items.find((entry) => entry.id === id);
         if (item === undefined || item.content.trim() === '') return;
         try {
           if (navigator.clipboard !== undefined && typeof navigator.clipboard.writeText === 'function') {
@@ -1828,7 +2599,8 @@ window.__ModuleLoader__.load({
                       onCopyImage: (id) => void copyImage(id),
                       onCopyText: (id) => void copyText(id),
                       onStack: (id, edge) => restack(id, edge),
-                      onDelete: (id) => void remove(id)
+                      onDelete: (id) => void remove(id),
+                      onEdit: (id) => void openEditor(id)
                     })
                   )
           )
@@ -1844,6 +2616,7 @@ window.__ModuleLoader__.load({
               x: menu.x,
               y: menu.y,
               onClose: () => setMenu(null),
+              onEdit: (id) => void openEditor(id),
               onSend: (ids) => void send(ids),
               onDownload: (id) => void download(id),
               onCopyImage: (id) => void copyImage(id),
@@ -1852,6 +2625,16 @@ window.__ModuleLoader__.load({
               onDelete: (id) => void remove(id)
             });
           })(),
+        editing === null
+          ? null
+          : h(ImageEditor, {
+            t,
+            item: editing.item,
+            blob: editing.blob,
+            onError: reportEditError,
+            onSave: (blob) => void saveEdit(blob),
+            onClose: closeEditor
+          }),
         preview === undefined
           ? null
           : h(
@@ -1924,6 +2707,20 @@ window.__ModuleLoader__.load({
                   },
                   h(IconSend, {}),
                   h('span', {}, t('action.send'))
+                ),
+                h(
+                  'button',
+                  {
+                    type: 'button',
+                    className: 'mbw-btn',
+                    onClick: () => {
+                      const id = preview.id;
+                      close();
+                      void openEditor(id);
+                    }
+                  },
+                  h(IconEdit, {}),
+                  h('span', {}, t('action.editImage'))
                 ),
                 h(
                   'button',
