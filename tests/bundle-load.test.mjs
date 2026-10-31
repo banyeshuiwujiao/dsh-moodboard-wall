@@ -136,9 +136,12 @@ assert.deepEqual(missingInZh, [], `keys missing from the Chinese dictionary: ${m
 // The image editor's own copy must exist in both languages.
 const editorKeys = [
   'action.editImage',
-  'edit.title', 'edit.tab.annotate', 'edit.tab.resize', 'edit.tab.format',
-  'edit.tool.rect', 'edit.tool.ellipse', 'edit.tool.arrow', 'edit.tool.pen',
-  'edit.tool.mosaic', 'edit.tool.text',
+  'edit.title', 'edit.tab.annotate', 'edit.tab.crop', 'edit.tab.adjust', 'edit.tab.resize', 'edit.tab.format',
+  'edit.tool.rect', 'edit.tool.ellipse', 'edit.tool.arrow', 'edit.tool.pen', 'edit.tool.highlighter',
+  'edit.tool.badge', 'edit.tool.redact', 'edit.tool.mosaic', 'edit.tool.magnifier', 'edit.tool.text',
+  'edit.crop.apply', 'edit.crop.reset', 'edit.crop.hint',
+  'edit.rotate.cw', 'edit.rotate.ccw', 'edit.flip.h', 'edit.flip.v',
+  'edit.enhance.ocr', 'edit.enhance.invert', 'edit.enhance.reset',
   'edit.color', 'edit.weight', 'edit.undo', 'edit.clearMarks',
   'edit.width', 'edit.height', 'edit.lockAspect', 'edit.original',
   'edit.format', 'edit.quality', 'edit.textPlaceholder',

@@ -66,14 +66,30 @@ window.__ModuleLoader__.load({
       'action.editImage': '编辑图片',
       'edit.title': '图片编辑',
       'edit.tab.annotate': '标记',
+      'edit.tab.crop': '裁剪',
+      'edit.tab.adjust': '调整',
       'edit.tab.resize': '尺寸',
       'edit.tab.format': '格式',
       'edit.tool.rect': '矩形',
       'edit.tool.ellipse': '椭圆',
       'edit.tool.arrow': '箭头',
       'edit.tool.pen': '画笔',
+      'edit.tool.highlighter': '荧光笔',
+      'edit.tool.badge': '序号',
+      'edit.tool.redact': '脱敏涂黑',
       'edit.tool.mosaic': '马赛克',
+      'edit.tool.magnifier': '放大镜',
       'edit.tool.text': '文字',
+      'edit.crop.apply': '应用裁剪',
+      'edit.crop.reset': '重置选区',
+      'edit.crop.hint': '拖动框选要保留的区域',
+      'edit.rotate.cw': '顺时针90°',
+      'edit.rotate.ccw': '逆时针90°',
+      'edit.flip.h': '水平翻转',
+      'edit.flip.v': '垂直翻转',
+      'edit.enhance.ocr': '高对比度 (OCR增强)',
+      'edit.enhance.invert': '底色反转 (反色)',
+      'edit.enhance.reset': '恢复原图',
       'edit.color': '颜色',
       'edit.weight': '粗细',
       'edit.undo': '撤销',
@@ -154,14 +170,30 @@ window.__ModuleLoader__.load({
       'action.editImage': 'Edit image',
       'edit.title': 'Edit image',
       'edit.tab.annotate': 'Mark up',
+      'edit.tab.crop': 'Crop',
+      'edit.tab.adjust': 'Adjust',
       'edit.tab.resize': 'Resize',
       'edit.tab.format': 'Format',
       'edit.tool.rect': 'Rectangle',
       'edit.tool.ellipse': 'Ellipse',
       'edit.tool.arrow': 'Arrow',
       'edit.tool.pen': 'Pen',
+      'edit.tool.highlighter': 'Highlighter',
+      'edit.tool.badge': 'Step badge',
+      'edit.tool.redact': 'Redact',
       'edit.tool.mosaic': 'Mosaic',
+      'edit.tool.magnifier': 'Magnifier',
       'edit.tool.text': 'Text',
+      'edit.crop.apply': 'Apply crop',
+      'edit.crop.reset': 'Reset crop',
+      'edit.crop.hint': 'Drag a rectangle to select crop area',
+      'edit.rotate.cw': 'Rotate 90° CW',
+      'edit.rotate.ccw': 'Rotate 90° CCW',
+      'edit.flip.h': 'Flip horizontal',
+      'edit.flip.v': 'Flip vertical',
+      'edit.enhance.ocr': 'High contrast (OCR enhance)',
+      'edit.enhance.invert': 'Invert colors',
+      'edit.enhance.reset': 'Reset adjust',
       'edit.color': 'Color',
       'edit.weight': 'Thickness',
       'edit.undo': 'Undo',
@@ -305,6 +337,8 @@ window.__ModuleLoader__.load({
       '.mbw-editorColor{width:28px;height:28px;padding:2px;border:.5px solid var(--dsw-alias-border-l2);border-radius:var(--dsw-radius-sm,6px);background:transparent;cursor:pointer}',
       '.mbw-editorRange{width:78px;accent-color:var(--dsw-alias-brand-primary)}',
       '.mbw-editorPanel{display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:none;padding:10px 12px;background:var(--dsw-alias-bg-layer-1);border-top:.5px solid var(--dsw-alias-border-l1)}',
+      '.mbw-editorBtnGroup{display:flex;align-items:center;gap:6px;flex-wrap:wrap}',
+      '.mbw-editorHint{font-size:12px;color:var(--dsw-alias-label-secondary)}',
       '.mbw-editorField{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dsw-alias-label-secondary)}',
       '.mbw-editorNum{width:84px;height:26px;padding:0 8px;border-radius:var(--dsw-radius-sm,6px);border:.5px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);font:inherit;font-size:12px;outline:none}',
       '.mbw-editorNum:focus{border-color:var(--dsw-alias-brand-primary)}',
@@ -754,7 +788,7 @@ window.__ModuleLoader__.load({
     }
 
     /** Paint one operation onto a 2D context. */
-    function paintOp(context, op) {
+    function paintOp(context, op, base) {
       const points = op.points;
       if (!Array.isArray(points) || points.length === 0) return;
       const first = points[0];
@@ -768,6 +802,9 @@ window.__ModuleLoader__.load({
       context.lineJoin = 'round';
       if (op.tool === 'rect') {
         context.strokeRect(rect.x, rect.y, rect.width, rect.height);
+      } else if (op.tool === 'redact') {
+        context.fillStyle = '#000000';
+        context.fillRect(rect.x, rect.y, rect.width, rect.height);
       } else if (op.tool === 'ellipse') {
         context.beginPath();
         context.ellipse(
@@ -796,6 +833,51 @@ window.__ModuleLoader__.load({
         context.moveTo(first.x, first.y);
         for (const point of points) context.lineTo(point.x, point.y);
         context.stroke();
+      } else if (op.tool === 'highlighter') {
+        context.globalAlpha = 0.38;
+        context.lineWidth = Math.max(14, op.width * 4);
+        context.lineCap = 'square';
+        context.beginPath();
+        context.moveTo(first.x, first.y);
+        for (const point of points) context.lineTo(point.x, point.y);
+        context.stroke();
+      } else if (op.tool === 'badge') {
+        const radius = Math.max(13, op.width * 2.2 + 8);
+        const cx = first.x;
+        const cy = first.y;
+        context.beginPath();
+        context.arc(cx, cy, radius, 0, Math.PI * 2);
+        context.fillStyle = op.color || '#ff3b30';
+        context.fill();
+        context.lineWidth = 2;
+        context.strokeStyle = '#ffffff';
+        context.stroke();
+        context.font = `bold ${Math.round(radius * 1.15)}px system-ui, sans-serif`;
+        context.fillStyle = '#ffffff';
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillText(String(op.badgeNumber || 1), cx, cy);
+      } else if (op.tool === 'magnifier') {
+        const cx = (first.x + last.x) / 2;
+        const cy = (first.y + last.y) / 2;
+        const radius = Math.max(24, Math.hypot(last.x - first.x, last.y - first.y) / 2);
+        if (base) {
+          context.save();
+          context.beginPath();
+          context.arc(cx, cy, radius, 0, Math.PI * 2);
+          context.clip();
+          context.imageSmoothingEnabled = true;
+          context.imageSmoothingQuality = 'high';
+          const sw = radius;
+          const sh = radius;
+          context.drawImage(base, cx - sw / 2, cy - sh / 2, sw, sh, cx - radius, cy - radius, radius * 2, radius * 2);
+          context.restore();
+        }
+        context.beginPath();
+        context.arc(cx, cy, radius, 0, Math.PI * 2);
+        context.lineWidth = Math.max(3, op.width);
+        context.strokeStyle = op.color || '#ffffff';
+        context.stroke();
       } else if (op.tool === 'text') {
         context.font = `${Math.round(op.width * 4 + 14)}px "Segoe UI", system-ui, sans-serif`;
         context.textBaseline = 'top';
@@ -810,8 +892,8 @@ window.__ModuleLoader__.load({
     function renderEditorOps(context, base, ops, draft) {
       context.clearRect(0, 0, context.canvas.width, context.canvas.height);
       if (base) context.drawImage(base, 0, 0);
-      for (const op of ops) paintOp(context, op);
-      if (draft) paintOp(context, draft);
+      for (const op of ops) paintOp(context, op, base);
+      if (draft) paintOp(context, draft, base);
     }
 
     /** Encode a canvas with the chosen media type and quality. */
@@ -1221,7 +1303,11 @@ window.__ModuleLoader__.load({
       { id: 'ellipse', key: 'edit.tool.ellipse', icon: 'M8 3.5c3 0 5 2 5 4.5s-2 4.5-5 4.5-5-2-5-4.5 2-4.5 5-4.5z' },
       { id: 'arrow', key: 'edit.tool.arrow', icon: 'M3 13L12 4M12 4H8M12 4v4' },
       { id: 'pen', key: 'edit.tool.pen', icon: 'M3 13l1-3 7-7 2 2-7 7-3 1z' },
+      { id: 'highlighter', key: 'edit.tool.highlighter', icon: 'M4 14l-2 1 1-3 7-7 3 3-7 7-2-1zM9 4l3 3' },
+      { id: 'badge', key: 'edit.tool.badge', icon: 'M8 2.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM7 6l1-1v6' },
+      { id: 'redact', key: 'edit.tool.redact', icon: 'M2.5 4.5h11v7h-11zM4 6.5h8M4 9.5h8' },
       { id: 'mosaic', key: 'edit.tool.mosaic', icon: 'M3 3h4v4H3zM9 3h4v4H9zM3 9h4v4H3zM9 9h4v4H9z' },
+      { id: 'magnifier', key: 'edit.tool.magnifier', icon: 'M7 2.5a4.5 4.5 0 102.8 8L13.5 14M7 5v4M5 7h4' },
       { id: 'text', key: 'edit.tool.text', icon: 'M4 3h8M8 3v10' }
     ];
 
@@ -1243,14 +1329,18 @@ window.__ModuleLoader__.load({
       const { t, item, blob, onError, onSave, onClose } = props;
       const canvasRef = useRef(null);
       const imageRef = useRef(null);
+      const baseOriginalRef = useRef(null);
       const textRef = useRef(null);
       const ratioRef = useRef(1);
+      const historyRef = useRef([]);
+      const cropStartRef = useRef(null);
       const [tab, setTab] = useState('annotate');
       const [tool, setTool] = useState('rect');
       const [color, setColor] = useState('#ff3b30');
       const [weight, setWeight] = useState(3);
       const [ops, setOps] = useState([]);
       const [draft, setDraft] = useState(null);
+      const [cropRect, setCropRect] = useState(null);
       const [natural, setNatural] = useState({ width: 0, height: 0 });
       const [ready, setReady] = useState(false);
       const [width, setWidth] = useState(0);
@@ -1265,8 +1355,58 @@ window.__ModuleLoader__.load({
       const [busy, setBusy] = useState(false);
       const opsRef = useRef(ops);
       const draftRef = useRef(draft);
+      const cropRectRef = useRef(cropRect);
       opsRef.current = ops;
       draftRef.current = draft;
+      cropRectRef.current = cropRect;
+
+      /** Save current state to history stack before destructive changes. */
+      const pushHistory = useCallback(() => {
+        const img = imageRef.current;
+        if (!img) return;
+        const copy = document.createElement('canvas');
+        copy.width = img.naturalWidth || img.width || 1;
+        copy.height = img.naturalHeight || img.height || 1;
+        const ctx = copy.getContext('2d');
+        if (ctx) ctx.drawImage(img, 0, 0);
+        historyRef.current.push({
+          base: copy,
+          width,
+          height,
+          natural: { ...natural },
+          ops: [...ops]
+        });
+        if (historyRef.current.length > 25) historyRef.current.shift();
+      }, [width, height, natural, ops]);
+
+      /** Undo the last drawing operation or base image transformation. */
+      const undoAction = useCallback(() => {
+        if (cropRectRef.current !== null) {
+          setCropRect(null);
+          return;
+        }
+        if (ops.length > 0) {
+          setOps((existing) => existing.slice(0, -1));
+          return;
+        }
+        if (historyRef.current.length > 0) {
+          const prev = historyRef.current.pop();
+          if (!prev) return;
+          imageRef.current = prev.base;
+          setWidth(prev.width);
+          setHeight(prev.height);
+          setNatural(prev.natural);
+          ratioRef.current = prev.natural.width / Math.max(1, prev.natural.height);
+          setOps(prev.ops);
+          const canvas = canvasRef.current;
+          if (canvas) {
+            canvas.width = prev.natural.width;
+            canvas.height = prev.natural.height;
+            const context = canvas.getContext('2d');
+            if (context) renderEditorOps(context, prev.base, prev.ops, null);
+          }
+        }
+      }, [ops]);
 
       /** Load the block's bytes once and size the canvas to them. */
       useEffect(() => {
@@ -1280,6 +1420,7 @@ window.__ModuleLoader__.load({
           canvas.width = image.naturalWidth;
           canvas.height = image.naturalHeight;
           imageRef.current = image;
+          baseOriginalRef.current = image;
           ratioRef.current = image.naturalWidth / Math.max(1, image.naturalHeight);
           setNatural({ width: image.naturalWidth, height: image.naturalHeight });
           setWidth(image.naturalWidth);
@@ -1298,14 +1439,33 @@ window.__ModuleLoader__.load({
         };
       }, [blob, onError, t]);
 
-      /** Repaint whenever the committed operations or the draft change. */
+      /** Repaint whenever the committed operations, the draft, or crop rect change. */
       useEffect(() => {
         if (!ready) return;
         const canvas = canvasRef.current;
         const context = canvas === null ? null : canvas.getContext('2d');
         if (canvas === null || context === null) return;
         renderEditorOps(context, imageRef.current, ops, draft);
-      }, [ops, draft, ready]);
+        if (tab === 'crop' && cropRect && cropRect.width > 2 && cropRect.height > 2) {
+          context.save();
+          context.fillStyle = 'rgba(0, 0, 0, 0.52)';
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          context.clearRect(cropRect.x, cropRect.y, cropRect.width, cropRect.height);
+          if (imageRef.current) {
+            context.drawImage(imageRef.current, cropRect.x, cropRect.y, cropRect.width, cropRect.height, cropRect.x, cropRect.y, cropRect.width, cropRect.height);
+          }
+          for (const op of ops) paintOp(context, op, imageRef.current);
+          context.strokeStyle = '#ffffff';
+          context.lineWidth = 2;
+          context.setLineDash([6, 6]);
+          context.strokeRect(cropRect.x, cropRect.y, cropRect.width, cropRect.height);
+          context.setLineDash([]);
+          context.fillStyle = '#ffffff';
+          context.font = '12px system-ui, sans-serif';
+          context.fillText(`${Math.round(cropRect.width)} × ${Math.round(cropRect.height)}`, cropRect.x + 6, cropRect.y + cropRect.height - 8);
+          context.restore();
+        }
+      }, [ops, draft, cropRect, tab, ready]);
 
       /** Escape closes the editor. */
       useEffect(() => {
@@ -1339,19 +1499,34 @@ window.__ModuleLoader__.load({
         setDraft(null);
       }, []);
 
-      /** Begin a stroke or place the text box. */
+      /** Begin a stroke, crop drag, or place badge/text. */
       const onPointerDown = useCallback((event) => {
         if (!ready || event.button !== 0) return;
         const canvas = canvasRef.current;
         if (canvas === null) return;
         event.preventDefault();
-        // Pointer capture throws once the id is no longer active (a synthetic
-        // event, or a pointer released between dispatch and handling), and an
-        // uncaught throw here would drop the whole stroke.
-        try { canvas.setPointerCapture(event.pointerId); } catch { /* the stroke still tracks */ }
+        try { canvas.setPointerCapture(event.pointerId); } catch { /* tracks anyway */ }
         const point = imagePoint(event);
+        if (tab === 'crop') {
+          cropStartRef.current = point;
+          setCropRect(boxOf(point, point));
+          return;
+        }
+        if (tab !== 'annotate') return;
         const box = canvas.getBoundingClientRect();
         const scale = box.width > 0 ? canvas.width / box.width : 1;
+        if (tool === 'badge') {
+          const badgeCount = ops.filter((entry) => entry.tool === 'badge').length;
+          const badgeOp = {
+            tool: 'badge',
+            points: [point],
+            color,
+            width: Math.max(1, weight * scale),
+            badgeNumber: badgeCount + 1
+          };
+          setOps((existing) => [...existing, badgeOp]);
+          return;
+        }
         const operation = { tool, points: [point], color, width: Math.max(1, weight * scale) };
         setDraft(operation);
         if (tool === 'text') {
@@ -1364,35 +1539,229 @@ window.__ModuleLoader__.load({
             field.focus();
           }
         }
-      }, [ready, tool, color, weight, imagePoint]);
+      }, [ready, tab, tool, color, weight, ops, imagePoint]);
 
-      /** Extend the in-flight stroke. */
+      /** Extend the in-flight stroke or crop box. */
       const onPointerMove = useCallback((event) => {
-        const current = draftRef.current;
-        if (current === null || current.tool === 'text') return;
         const point = imagePoint(event);
-        if (current.tool === 'pen') setDraft({ ...current, points: [...current.points, point] });
-        else setDraft({ ...current, points: [current.points[0], point] });
-      }, [imagePoint]);
+        if (tab === 'crop' && cropStartRef.current) {
+          setCropRect(boxOf(cropStartRef.current, point));
+          return;
+        }
+        const current = draftRef.current;
+        if (current === null || current.tool === 'text' || current.tool === 'badge') return;
+        if (current.tool === 'pen' || current.tool === 'highlighter') {
+          setDraft({ ...current, points: [...current.points, point] });
+        } else {
+          setDraft({ ...current, points: [current.points[0], point] });
+        }
+      }, [tab, imagePoint]);
 
-      /** Finish the in-flight stroke. */
+      /** Finish the in-flight stroke or crop drag. */
       const onPointerUp = useCallback(() => {
+        if (tab === 'crop') {
+          cropStartRef.current = null;
+          return;
+        }
         const current = draftRef.current;
         if (current === null) return;
         setDraft(null);
-        if (current.tool === 'text') return;
+        if (current.tool === 'text' || current.tool === 'badge') return;
         setOps((existing) => [...existing, current]);
-      }, []);
+      }, [tab]);
 
-      /** Compose the base bitmap, the marks, and the export box into one blob. */
+      /** Apply the selected crop box to the base image and shift operations. */
+      const applyCrop = useCallback(() => {
+        const box = cropRectRef.current;
+        const img = imageRef.current;
+        const cv = canvasRef.current;
+        if (!box || box.width < 4 || box.height < 4 || !img || !cv) return;
+        pushHistory();
+        const cw = Math.max(1, Math.round(box.width));
+        const ch = Math.max(1, Math.round(box.height));
+        const off = document.createElement('canvas');
+        off.width = cw;
+        off.height = ch;
+        const offCtx = off.getContext('2d');
+        if (offCtx) {
+          offCtx.drawImage(img, box.x, box.y, cw, ch, 0, 0, cw, ch);
+        }
+        const shiftedOps = ops.map((op) => ({
+          ...op,
+          points: op.points.map((p) => ({ x: p.x - box.x, y: p.y - box.y }))
+        })).filter((op) => {
+          if (op.tool === 'badge' || op.tool === 'text') {
+            const p = op.points[0];
+            return p.x >= 0 && p.x <= cw && p.y >= 0 && p.y <= ch;
+          }
+          return true;
+        });
+        imageRef.current = off;
+        ratioRef.current = cw / Math.max(1, ch);
+        setNatural({ width: cw, height: ch });
+        setWidth(cw);
+        setHeight(ch);
+        setOps(shiftedOps);
+        setCropRect(null);
+        cv.width = cw;
+        cv.height = ch;
+        const ctx = cv.getContext('2d');
+        if (ctx) renderEditorOps(ctx, off, shiftedOps, null);
+        setTab('annotate');
+      }, [ops, pushHistory]);
+
+      /** Rotate the base image and adjust marks by 90 degrees. */
+      const applyRotate = useCallback((direction) => {
+        const cv = canvasRef.current;
+        const img = imageRef.current;
+        if (!cv || !img) return;
+        pushHistory();
+        const oldW = cv.width;
+        const oldH = cv.height;
+        const newW = oldH;
+        const newH = oldW;
+        const off = document.createElement('canvas');
+        off.width = newW;
+        off.height = newH;
+        const offCtx = off.getContext('2d');
+        if (!offCtx) return;
+        if (direction > 0) {
+          offCtx.translate(newW, 0);
+          offCtx.rotate(Math.PI / 2);
+        } else {
+          offCtx.translate(0, newH);
+          offCtx.rotate(-Math.PI / 2);
+        }
+        offCtx.drawImage(img, 0, 0);
+        const transformedOps = ops.map((op) => ({
+          ...op,
+          points: op.points.map((p) => (direction > 0 ? { x: oldH - p.y, y: p.x } : { x: p.y, y: oldW - p.x }))
+        }));
+        imageRef.current = off;
+        ratioRef.current = newW / Math.max(1, newH);
+        setNatural({ width: newW, height: newH });
+        setWidth(newW);
+        setHeight(newH);
+        setOps(transformedOps);
+        cv.width = newW;
+        cv.height = newH;
+        const ctx = cv.getContext('2d');
+        if (ctx) renderEditorOps(ctx, off, transformedOps, null);
+      }, [ops, pushHistory]);
+
+      /** Flip the base image horizontally or vertically. */
+      const applyFlip = useCallback((axis) => {
+        const cv = canvasRef.current;
+        const img = imageRef.current;
+        if (!cv || !img) return;
+        pushHistory();
+        const w = cv.width;
+        const h = cv.height;
+        const off = document.createElement('canvas');
+        off.width = w;
+        off.height = h;
+        const offCtx = off.getContext('2d');
+        if (!offCtx) return;
+        if (axis === 'h') {
+          offCtx.translate(w, 0);
+          offCtx.scale(-1, 1);
+        } else {
+          offCtx.translate(0, h);
+          offCtx.scale(1, -1);
+        }
+        offCtx.drawImage(img, 0, 0);
+        const transformedOps = ops.map((op) => ({
+          ...op,
+          points: op.points.map((p) => (axis === 'h' ? { x: w - p.x, y: p.y } : { x: p.x, y: h - p.y }))
+        }));
+        imageRef.current = off;
+        setOps(transformedOps);
+        const ctx = cv.getContext('2d');
+        if (ctx) renderEditorOps(ctx, off, transformedOps, null);
+      }, [ops, pushHistory]);
+
+      /** Enhance image contrast for OCR or reading. */
+      const applyOcrEnhance = useCallback(() => {
+        const cv = canvasRef.current;
+        const img = imageRef.current;
+        if (!cv || !img) return;
+        pushHistory();
+        const off = document.createElement('canvas');
+        off.width = cv.width;
+        off.height = cv.height;
+        const offCtx = off.getContext('2d');
+        if (!offCtx) return;
+        offCtx.drawImage(img, 0, 0);
+        const imgData = offCtx.getImageData(0, 0, off.width, off.height);
+        const data = imgData.data;
+        let sum = 0;
+        const total = data.length / 4;
+        for (let i = 0; i < data.length; i += 4) {
+          sum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        }
+        const threshold = clamp(Math.round((sum / total) * 0.95), 80, 180);
+        for (let i = 0; i < data.length; i += 4) {
+          const luma = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+          const val = luma > threshold ? 255 : 0;
+          data[i] = val;
+          data[i + 1] = val;
+          data[i + 2] = val;
+        }
+        offCtx.putImageData(imgData, 0, 0);
+        imageRef.current = off;
+        const ctx = cv.getContext('2d');
+        if (ctx) renderEditorOps(ctx, off, ops, null);
+      }, [ops, pushHistory]);
+
+      /** Invert base image colors. */
+      const applyInvert = useCallback(() => {
+        const cv = canvasRef.current;
+        const img = imageRef.current;
+        if (!cv || !img) return;
+        pushHistory();
+        const off = document.createElement('canvas');
+        off.width = cv.width;
+        off.height = cv.height;
+        const offCtx = off.getContext('2d');
+        if (!offCtx) return;
+        offCtx.drawImage(img, 0, 0);
+        const imgData = offCtx.getImageData(0, 0, off.width, off.height);
+        const data = imgData.data;
+        for (let i = 0; i < data.length; i += 4) {
+          data[i] = 255 - data[i];
+          data[i + 1] = 255 - data[i + 1];
+          data[i + 2] = 255 - data[i + 2];
+        }
+        offCtx.putImageData(imgData, 0, 0);
+        imageRef.current = off;
+        const ctx = cv.getContext('2d');
+        if (ctx) renderEditorOps(ctx, off, ops, null);
+      }, [ops, pushHistory]);
+
+      /** Reset image back to original loaded picture. */
+      const applyResetImage = useCallback(() => {
+        const orig = baseOriginalRef.current;
+        const cv = canvasRef.current;
+        if (!orig || !cv) return;
+        pushHistory();
+        imageRef.current = orig;
+        ratioRef.current = orig.naturalWidth / Math.max(1, orig.naturalHeight);
+        setNatural({ width: orig.naturalWidth, height: orig.naturalHeight });
+        setWidth(orig.naturalWidth);
+        setHeight(orig.naturalHeight);
+        cv.width = orig.naturalWidth;
+        cv.height = orig.naturalHeight;
+        const ctx = cv.getContext('2d');
+        if (ctx) renderEditorOps(ctx, orig, ops, null);
+      }, [ops, pushHistory]);
+
+      /** Compose the base bitmap, marks, and export box into one blob. */
       const compose = useCallback(async () => {
         const canvas = canvasRef.current;
         if (canvas === null) return undefined;
         const targetWidth = clamp(Math.round(width) || canvas.width, 1, 8192);
         const targetHeight = clamp(Math.round(height) || canvas.height, 1, 8192);
         const resized = targetWidth !== canvas.width || targetHeight !== canvas.height;
-        // JPEG has no alpha, so anything transparent would come out black:
-        // flatten the picture onto white whenever it is not preserved.
         const flatten = format === 'image/jpeg';
         if (!resized && !flatten) return encodeCanvas(canvas, format, quality);
         const output = document.createElement('canvas');
@@ -1428,7 +1797,7 @@ window.__ModuleLoader__.load({
               type: label,
               size
             }));
-          }).catch(() => { /* the estimate is advisory only */ });
+          }).catch(() => { /* estimate is advisory */ });
         }, 600);
         return () => {
           cancelled = true;
@@ -1466,6 +1835,7 @@ window.__ModuleLoader__.load({
       }, [lock]);
 
       const lossy = format !== 'image/png';
+      const hasUndo = ops.length > 0 || historyRef.current.length > 0;
 
       return h(
         'div',
@@ -1493,6 +1863,8 @@ window.__ModuleLoader__.load({
           { className: 'mbw-editorTabs' },
           [
             { id: 'annotate', label: t('edit.tab.annotate') },
+            { id: 'crop', label: t('edit.tab.crop') },
+            { id: 'adjust', label: t('edit.tab.adjust') },
             { id: 'resize', label: t('edit.tab.resize') },
             { id: 'format', label: t('edit.tab.format') }
           ].map((entry) =>
@@ -1515,12 +1887,12 @@ window.__ModuleLoader__.load({
           h('canvas', {
             ref: canvasRef,
             className: 'mbw-editorCanvas',
-            'data-tool': tab === 'annotate' ? tool : 'none',
-            style: tab === 'annotate' ? undefined : { cursor: 'default' },
-            onPointerDown: tab === 'annotate' ? onPointerDown : undefined,
-            onPointerMove: tab === 'annotate' ? onPointerMove : undefined,
-            onPointerUp: tab === 'annotate' ? onPointerUp : undefined,
-            onPointerCancel: tab === 'annotate' ? onPointerUp : undefined
+            'data-tool': tab === 'annotate' ? tool : tab === 'crop' ? 'crop' : 'none',
+            style: { cursor: tab === 'annotate' ? 'crosshair' : tab === 'crop' ? 'crosshair' : 'default' },
+            onPointerDown,
+            onPointerMove,
+            onPointerUp,
+            onPointerCancel: onPointerUp
           })
         ),
         tab === 'annotate'
@@ -1568,8 +1940,8 @@ window.__ModuleLoader__.load({
             h('button', {
               type: 'button',
               className: 'mbw-btn',
-              disabled: ops.length === 0,
-              onClick: () => setOps((existing) => existing.slice(0, -1))
+              disabled: !hasUndo,
+              onClick: undoAction
             }, t('edit.undo')),
             h('button', {
               type: 'button',
@@ -1579,89 +1951,127 @@ window.__ModuleLoader__.load({
             }, t('edit.clearMarks')),
             estimate ? h('span', { className: 'mbw-editorMeta' }, estimate) : null
           )
-          : tab === 'resize'
+          : tab === 'crop'
             ? h(
               'div',
               { className: 'mbw-editorPanel' },
-              h(
-                'label',
-                { className: 'mbw-editorField' },
-                t('edit.width'),
-                h('input', {
-                  type: 'number',
-                  className: 'mbw-editorNum',
-                  min: 1,
-                  max: 8192,
-                  value: width,
-                  onChange: (event) => changeWidth(event.target.value)
-                })
-              ),
-              h(
-                'label',
-                { className: 'mbw-editorField' },
-                t('edit.height'),
-                h('input', {
-                  type: 'number',
-                  className: 'mbw-editorNum',
-                  min: 1,
-                  max: 8192,
-                  value: height,
-                  onChange: (event) => changeHeight(event.target.value)
-                })
-              ),
-              h(
-                'label',
-                { className: 'mbw-editorField' },
-                h('input', {
-                  type: 'checkbox',
-                  checked: lock,
-                  onChange: (event) => setLock(event.target.checked)
-                }),
-                t('edit.lockAspect')
-              ),
+              h('span', { className: 'mbw-editorHint' }, t('edit.crop.hint')),
+              cropRect && cropRect.width > 4 && cropRect.height > 4
+                ? h('span', { className: 'mbw-editorBadgeText' }, `${Math.round(cropRect.width)} × ${Math.round(cropRect.height)}`)
+                : null,
               h('button', {
                 type: 'button',
                 className: 'mbw-btn',
-                onClick: () => { setWidth(natural.width); setHeight(natural.height); }
-              }, t('edit.original')),
+                'data-variant': 'primary',
+                disabled: !cropRect || cropRect.width < 4 || cropRect.height < 4,
+                onClick: applyCrop
+              }, t('edit.crop.apply')),
+              h('button', {
+                type: 'button',
+                className: 'mbw-btn',
+                disabled: !cropRect,
+                onClick: () => setCropRect(null)
+              }, t('edit.crop.reset')),
               estimate ? h('span', { className: 'mbw-editorMeta' }, estimate) : null
             )
-            : h(
-              'div',
-              { className: 'mbw-editorPanel' },
-              h(
-                'label',
-                { className: 'mbw-editorField' },
-                t('edit.format'),
-                h(
-                  'select',
-                  {
-                    className: 'mbw-select',
-                    value: format,
-                    onChange: (event) => setFormat(event.target.value)
-                  },
-                  EDITOR_FORMATS.map((entry) => h('option', { key: entry.id, value: entry.id }, entry.label))
-                )
-              ),
-              lossy
+            : tab === 'adjust'
+              ? h(
+                'div',
+                { className: 'mbw-editorPanel' },
+                h('div', { className: 'mbw-editorBtnGroup' },
+                  h('button', { type: 'button', className: 'mbw-btn', onClick: () => applyRotate(1) }, t('edit.rotate.cw')),
+                  h('button', { type: 'button', className: 'mbw-btn', onClick: () => applyRotate(-1) }, t('edit.rotate.ccw')),
+                  h('button', { type: 'button', className: 'mbw-btn', onClick: () => applyFlip('h') }, t('edit.flip.h')),
+                  h('button', { type: 'button', className: 'mbw-btn', onClick: () => applyFlip('v') }, t('edit.flip.v')),
+                  h('button', { type: 'button', className: 'mbw-btn', onClick: applyOcrEnhance }, t('edit.enhance.ocr')),
+                  h('button', { type: 'button', className: 'mbw-btn', onClick: applyInvert }, t('edit.enhance.invert')),
+                  h('button', { type: 'button', className: 'mbw-btn', onClick: applyResetImage }, t('edit.enhance.reset'))
+                ),
+                estimate ? h('span', { className: 'mbw-editorMeta' }, estimate) : null
+              )
+              : tab === 'resize'
                 ? h(
-                  'label',
-                  { className: 'mbw-editorField' },
-                  t('edit.quality'),
-                  h('input', {
-                    type: 'range',
-                    className: 'mbw-editorRange',
-                    min: 0.4,
-                    max: 1,
-                    step: 0.02,
-                    value: quality,
-                    onChange: (event) => setQuality(Number(event.target.value))
-                  }),
-                  h('span', {}, Math.round(quality * 100) + '%')
+                  'div',
+                  { className: 'mbw-editorPanel' },
+                  h(
+                    'label',
+                    { className: 'mbw-editorField' },
+                    t('edit.width'),
+                    h('input', {
+                      type: 'number',
+                      className: 'mbw-editorNum',
+                      min: 1,
+                      max: 8192,
+                      value: width,
+                      onChange: (event) => changeWidth(event.target.value)
+                    })
+                  ),
+                  h(
+                    'label',
+                    { className: 'mbw-editorField' },
+                    t('edit.height'),
+                    h('input', {
+                      type: 'number',
+                      className: 'mbw-editorNum',
+                      min: 1,
+                      max: 8192,
+                      value: height,
+                      onChange: (event) => changeHeight(event.target.value)
+                    })
+                  ),
+                  h(
+                    'label',
+                    { className: 'mbw-editorField' },
+                    h('input', {
+                      type: 'checkbox',
+                      checked: lock,
+                      onChange: (event) => setLock(event.target.checked)
+                    }),
+                    t('edit.lockAspect')
+                  ),
+                  h('button', {
+                    type: 'button',
+                    className: 'mbw-btn',
+                    onClick: () => { setWidth(natural.width); setHeight(natural.height); }
+                  }, t('edit.original')),
+                  estimate ? h('span', { className: 'mbw-editorMeta' }, estimate) : null
                 )
-                : null,
-              estimate ? h('span', { className: 'mbw-editorMeta' }, estimate) : null
-            ),
+                : h(
+                  'div',
+                  { className: 'mbw-editorPanel' },
+                  h(
+                    'label',
+                    { className: 'mbw-editorField' },
+                    t('edit.format'),
+                    h(
+                      'select',
+                      {
+                        className: 'mbw-select',
+                        value: format,
+                        onChange: (event) => setFormat(event.target.value)
+                      },
+                      EDITOR_FORMATS.map((entry) => h('option', { key: entry.id, value: entry.id }, entry.label))
+                    )
+                  ),
+                  lossy
+                    ? h(
+                      'label',
+                      { className: 'mbw-editorField' },
+                      t('edit.quality'),
+                      h('input', {
+                        type: 'range',
+                        className: 'mbw-editorRange',
+                        min: 0.4,
+                        max: 1,
+                        step: 0.02,
+                        value: quality,
+                        onChange: (event) => setQuality(Number(event.target.value))
+                      }),
+                      h('span', {}, Math.round(quality * 100) + '%')
+                    )
+                    : null,
+                  estimate ? h('span', { className: 'mbw-editorMeta' }, estimate) : null
+                ),
         h('input', {
           ref: textRef,
           type: 'text',
